@@ -597,6 +597,22 @@ local AntiAFKCorner = Instance.new("UICorner")
 AntiAFKCorner.CornerRadius = UDim.new(0, 8)
 AntiAFKCorner.Parent = AntiAFKToggle
 
+-- Botão Pegar Arma AS VAL
+local GetWeaponButton = Instance.new("TextButton")
+GetWeaponButton.Size = UDim2.new(1, -40, 0, 50)
+GetWeaponButton.Position = UDim2.new(0, 20, 0, 300)
+GetWeaponButton.BackgroundColor3 = Color3.fromRGB(80, 60, 100)
+GetWeaponButton.BorderSizePixel = 0
+GetWeaponButton.Text = "PEGAR ARMA AS VAL"
+GetWeaponButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+GetWeaponButton.TextSize = 18
+GetWeaponButton.Font = Enum.Font.GothamBold
+GetWeaponButton.Parent = PlayerFrame
+
+local GetWeaponCorner = Instance.new("UICorner")
+GetWeaponCorner.CornerRadius = UDim.new(0, 8)
+GetWeaponCorner.Parent = GetWeaponButton
+
 -- ==================
 -- ABA VISUAL
 -- ==================
@@ -871,6 +887,63 @@ AntiAFKToggle.MouseButton1Click:Connect(function()
         AntiAFKToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
         AntiAFKToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     end
+end)
+
+-- Função Pegar Arma AS VAL
+local function getASVAL()
+    local pos1 = Vector3.new(119.21, 13.00, 194.23)
+    local pos2 = Vector3.new(228.34, 21.51, 9.05)
+    
+    local function teleportAndInteract(position)
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(position)
+            wait(0.3)
+            -- Simular pressionar E
+            local vim = game:GetService("VirtualInputManager")
+            vim:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            wait(0.1)
+            vim:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            wait(0.5)
+        end
+    end
+    
+    local function resetCharacter()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+            LocalPlayer.Character.Humanoid.Health = 0
+            wait(5) -- Aguardar respawn
+        end
+    end
+    
+    -- Ciclo 1: Teleporta pos1 → E → Teleporta pos2 → E → Reseta
+    teleportAndInteract(pos1)
+    teleportAndInteract(pos2)
+    resetCharacter()
+    
+    -- Ciclo 2: Teleporta pos1 → E → Teleporta pos2 → E → Reseta
+    teleportAndInteract(pos1)
+    teleportAndInteract(pos2)
+    resetCharacter()
+    
+    -- Ciclo 3: Teleporta pos1 → E → Teleporta pos2 → E (SEM RESET)
+    teleportAndInteract(pos1)
+    teleportAndInteract(pos2)
+    
+    GetWeaponButton.Text = "✅ ARMA COLETADA!"
+    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
+    wait(2)
+    GetWeaponButton.Text = "PEGAR ARMA AS VAL"
+    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(80, 60, 100)
+end
+
+GetWeaponButton.MouseButton1Click:Connect(function()
+    GetWeaponButton.Text = "⏳ COLETANDO..."
+    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(100, 100, 40)
+    
+    spawn(function()
+        pcall(function()
+            getASVAL()
+        end)
+    end)
 end)
 
 -- ESP Toggle
