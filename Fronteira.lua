@@ -73,8 +73,21 @@ ScreenGui.Parent = PlayerGui
 -- Frame principal
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 400, 0, 480)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -240)
+
+-- Detectar se é mobile ou PC
+local UserInputService = game:GetService("UserInputService")
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+if isMobile then
+    -- Tamanho para Mobile (menor)
+    MainFrame.Size = UDim2.new(0, 340, 0, 420)
+    MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+else
+    -- Tamanho para PC
+    MainFrame.Size = UDim2.new(0, 400, 0, 480)
+    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -240)
+end
+
 MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -93,7 +106,7 @@ Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Title.BorderSizePixel = 0
 Title.Text = "Combat GUI"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 20
+Title.TextSize = isMobile and 16 or 20
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
@@ -169,9 +182,9 @@ CombatTab.Size = UDim2.new(0.25, -3, 1, 0)
 CombatTab.Position = UDim2.new(0, 2, 0, 0)
 CombatTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 CombatTab.BorderSizePixel = 0
-CombatTab.Text = "⚔️ COMBATE"
+CombatTab.Text = isMobile and "⚔️" or "⚔️ COMBATE"
 CombatTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-CombatTab.TextSize = 12
+CombatTab.TextSize = isMobile and 16 or 12
 CombatTab.Font = Enum.Font.GothamBold
 CombatTab.Parent = TabContainer
 
@@ -185,9 +198,9 @@ PlayerTab.Size = UDim2.new(0.25, -3, 1, 0)
 PlayerTab.Position = UDim2.new(0.25, 1, 0, 0)
 PlayerTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 PlayerTab.BorderSizePixel = 0
-PlayerTab.Text = "👤 PLAYER"
+PlayerTab.Text = isMobile and "👤" or "👤 PLAYER"
 PlayerTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-PlayerTab.TextSize = 12
+PlayerTab.TextSize = isMobile and 16 or 12
 PlayerTab.Font = Enum.Font.GothamBold
 PlayerTab.Parent = TabContainer
 
@@ -201,9 +214,9 @@ VisualTab.Size = UDim2.new(0.25, -3, 1, 0)
 VisualTab.Position = UDim2.new(0.5, 0, 0, 0)
 VisualTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 VisualTab.BorderSizePixel = 0
-VisualTab.Text = "👁️ VISUAL"
+VisualTab.Text = isMobile and "👁️" or "👁️ VISUAL"
 VisualTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-VisualTab.TextSize = 12
+VisualTab.TextSize = isMobile and 16 or 12
 VisualTab.Font = Enum.Font.GothamBold
 VisualTab.Parent = TabContainer
 
@@ -217,9 +230,9 @@ VolverTab.Size = UDim2.new(0.25, -3, 1, 0)
 VolverTab.Position = UDim2.new(0.75, 1, 0, 0)
 VolverTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 VolverTab.BorderSizePixel = 0
-VolverTab.Text = "🎖️ VOLVER"
+VolverTab.Text = isMobile and "🎖️" or "🎖️ VOLVER"
 VolverTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-VolverTab.TextSize = 12
+VolverTab.TextSize = isMobile and 16 or 12
 VolverTab.Font = Enum.Font.GothamBold
 VolverTab.Parent = TabContainer
 
@@ -312,7 +325,7 @@ CombatLabel.Position = UDim2.new(0, 10, 0, 10)
 CombatLabel.BackgroundTransparency = 1
 CombatLabel.Text = "⚔️ COMBATE"
 CombatLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-CombatLabel.TextSize = 18
+CombatLabel.TextSize = isMobile and 16 or 18
 CombatLabel.Font = Enum.Font.GothamBold
 CombatLabel.TextXAlignment = Enum.TextXAlignment.Left
 CombatLabel.Parent = CombatFrame
@@ -323,7 +336,7 @@ SizeLabel.Position = UDim2.new(0, 10, 0, 50)
 SizeLabel.BackgroundTransparency = 1
 SizeLabel.Text = "Tamanho da Hitbox: 20"
 SizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SizeLabel.TextSize = 14
+SizeLabel.TextSize = isMobile and 12 or 14
 SizeLabel.Font = Enum.Font.Gotham
 SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
 SizeLabel.Parent = CombatFrame
@@ -381,7 +394,7 @@ TeamToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 TeamToggle.BorderSizePixel = 0
 TeamToggle.Text = "Hitbox Team: OFF (Desativado)"
 TeamToggle.TextColor3 = Color3.fromRGB(120, 120, 120)
-TeamToggle.TextSize = 16
+TeamToggle.TextSize = isMobile and 13 or 16
 TeamToggle.Font = Enum.Font.GothamBold
 TeamToggle.Parent = CombatFrame
 
@@ -396,7 +409,7 @@ HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
 HitboxToggle.BorderSizePixel = 0
 HitboxToggle.Text = "ATIVAR HITBOX"
 HitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-HitboxToggle.TextSize = 18
+HitboxToggle.TextSize = isMobile and 15 or 18
 HitboxToggle.Font = Enum.Font.GothamBold
 HitboxToggle.Parent = CombatFrame
 
