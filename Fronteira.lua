@@ -364,14 +364,16 @@ SliderButtonCorner.Parent = SliderButton
 
 local dragging = false
 SliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
+        MainFrame.Draggable = false -- DESABILITA arrasto da GUI
     end
 end)
 
 SliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = false
+        MainFrame.Draggable = true -- REABILITA arrasto da GUI
     end
 end)
 
@@ -756,14 +758,16 @@ end)
 -- Speed Slider
 local draggingSpeed = false
 SpeedSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingSpeed = true
+        MainFrame.Draggable = false
     end
 end)
 
 SpeedSliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingSpeed = false
+        MainFrame.Draggable = true
     end
 end)
 
@@ -806,14 +810,16 @@ end)
 -- Jump Slider
 local draggingJump = false
 JumpSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingJump = true
+        MainFrame.Draggable = false
     end
 end)
 
 JumpSliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         draggingJump = false
+        MainFrame.Draggable = true
     end
 end)
 
