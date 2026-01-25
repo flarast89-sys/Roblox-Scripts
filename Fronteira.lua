@@ -172,6 +172,21 @@ Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = TopBar
 
+-- Botão Minimizar
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
+MinimizeButton.Position = UDim2.new(1, -95, 0.5, -20)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 60)
+MinimizeButton.Text = "—"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 18
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Parent = TopBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 10)
+MinCorner.Parent = MinimizeButton
+
 -- Botão Fechar
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 40, 0, 40)
@@ -186,6 +201,41 @@ CloseButton.Parent = TopBar
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 10)
 CloseCorner.Parent = CloseButton
+
+-- Botão Minimizado (Bolinha Flutuante)
+local MinimizedButton = Instance.new("TextButton")
+MinimizedButton.Size = UDim2.new(0, 70, 0, 70)
+MinimizedButton.Position = UDim2.new(1, -80, 0, 20)
+MinimizedButton.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
+MinimizedButton.Text = "⚔️"
+MinimizedButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizedButton.TextSize = 32
+MinimizedButton.Font = Enum.Font.GothamBold
+MinimizedButton.Visible = false
+MinimizedButton.Active = true
+MinimizedButton.Draggable = true
+MinimizedButton.Parent = ScreenGui
+
+local MinBallCorner = Instance.new("UICorner")
+MinBallCorner.CornerRadius = UDim.new(1, 0)
+MinBallCorner.Parent = MinimizedButton
+
+local MinBallStroke = Instance.new("UIStroke")
+MinBallStroke.Color = Color3.fromRGB(150, 150, 255)
+MinBallStroke.Thickness = 3
+MinBallStroke.Parent = MinimizedButton
+
+-- Efeito de pulso no botão minimizado
+local function pulseEffect()
+    while MinimizedButton.Visible do
+        TweenService:Create(MinimizedButton, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
+            {Size = UDim2.new(0, 75, 0, 75)}):Play()
+        wait(0.8)
+        TweenService:Create(MinimizedButton, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
+            {Size = UDim2.new(0, 70, 0, 70)}):Play()
+        wait(0.8)
+    end
+end
 
 -- Container de Abas
 local TabContainer = Instance.new("Frame")
@@ -994,11 +1044,55 @@ updatePlayerList()
 -- BOTÕES GUI
 -- ==================
 
+MinimizeButton.MouseButton1Click:Connect(function()
+    -- Animação de saída
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
+        {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+    TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
+    
+    wait(0.3)
+    MainFrame.Visible = false
+    MinimizedButton.Visible = true
+    
+    -- Iniciar efeito de pulso
+    spawn(pulseEffect)
+    
+    -- Animação de entrada do botão minimizado
+    MinimizedButton.Size = UDim2.new(0, 0, 0, 0)
+    MinimizedButton.Position = UDim2.new(1, -45, 0, 55)
+    TweenService:Create(MinimizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 70, 0, 70), Position = UDim2.new(1, -80, 0, 20)}):Play()
+end)
+
+MinimizedButton.MouseButton1Click:Connect(function()
+    -- Animação de saída do botão
+    TweenService:Create(MinimizedButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
+        {Size = UDim2.new(0, 0, 0, 0)}):Play()
+    TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
+    
+    wait(0.3)
+    MinimizedButton.Visible = false
+    MainFrame.Visible = true
+    
+    -- Animação de entrada da GUI
+    MainFrame.Size = UDim2.new(0, 0, 0, 0)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+    TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
+        {Size = UDim2.new(0, 380, 0, 620), Position = UDim2.new(0.5, -190, 0.5, -310)}):Play()
+end)
+
 CloseButton.MouseButton1Click:Connect(function()
     _G.HitboxEnabled = false
     if noclipConnection then
         noclipConnection:Disconnect()
     end
+    
+    -- Animação de fechamento
+    TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
+        {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+    TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
+    
+    wait(0.3)
     ScreenGui:Destroy()
     Blur:Destroy()
 end)
