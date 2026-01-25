@@ -1,4 +1,4 @@
--- Combat GUI Mobile Optimized - Estilo Rayfield
+-- Combat GUI Mobile Optimized - VERSÃO CORRIGIDA
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -10,23 +10,29 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 -- Configurações
-_G.HeadSize = 25
-_G.HitboxEnabled = false
-_G.HitboxTeam = false
-_G.NoclipEnabled = false
-_G.SpeedEnabled = false
-_G.SpeedValue = 16
-_G.JumpEnabled = false
-_G.JumpValue = 50
-_G.AntiAFKEnabled = true
-_G.ESPEnabled = false
-_G.TeamESPEnabled = false
-_G.FullbrightEnabled = false
-_G.SelectedCommander = nil
-_G.AutoVolverEnabled = false
+_G.Config = {
+    HeadSize = 25,
+    HitboxEnabled = false,
+    HitboxTeam = false,
+    NoclipEnabled = false,
+    SpeedEnabled = false,
+    SpeedValue = 16,
+    JumpEnabled = false,
+    JumpValue = 50,
+    AntiAFKEnabled = true,
+    ESPEnabled = false,
+    TeamESPEnabled = false,
+    FullbrightEnabled = false,
+    SelectedCommander = nil,
+    AutoVolverEnabled = false
+}
 
--- Variáveis Noclip
+-- Variáveis de controle
 local noclipConnection = nil
+local hitboxConnections = {}
+local originalSizes = {}
+local ESPObjects = {}
+local isRotating = false
 
 -- Comandos Volver
 local VolverCommands = {
@@ -71,7 +77,6 @@ local VolverCommands = {
     [";H Retaguarda, volver."] = 180,
 }
 
-local ESPObjects = {}
 local originalLightingSettings = {
     Ambient = Lighting.Ambient,
     Brightness = Lighting.Brightness,
@@ -91,10 +96,9 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Blur de fundo
 local Blur = Instance.new("BlurEffect")
 Blur.Size = 0
-Blur.Parent = game:GetService("Lighting")
+Blur.Parent = Lighting
 
 -- Frame Principal
 local MainFrame = Instance.new("Frame")
@@ -165,7 +169,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v2.0 Mobile Optimized"
+Subtitle.Text = "v2.1 Fixed"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
@@ -202,7 +206,7 @@ local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 10)
 CloseCorner.Parent = CloseButton
 
--- Botão Minimizado (Bolinha Flutuante)
+-- Botão Minimizado
 local MinimizedButton = Instance.new("TextButton")
 MinimizedButton.Size = UDim2.new(0, 70, 0, 70)
 MinimizedButton.Position = UDim2.new(1, -80, 0, 20)
@@ -225,18 +229,6 @@ MinBallStroke.Color = Color3.fromRGB(150, 150, 255)
 MinBallStroke.Thickness = 3
 MinBallStroke.Parent = MinimizedButton
 
--- Efeito de pulso no botão minimizado
-local function pulseEffect()
-    while MinimizedButton.Visible do
-        TweenService:Create(MinimizedButton, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
-            {Size = UDim2.new(0, 75, 0, 75)}):Play()
-        wait(0.8)
-        TweenService:Create(MinimizedButton, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), 
-            {Size = UDim2.new(0, 70, 0, 70)}):Play()
-        wait(0.8)
-    end
-end
-
 -- Container de Abas
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 50)
@@ -247,7 +239,6 @@ TabContainer.Parent = MainFrame
 -- Sistema de Abas
 local tabs = {}
 local frames = {}
-local currentTab = nil
 
 local function createTab(name, icon, position)
     local tab = Instance.new("TextButton")
@@ -336,7 +327,6 @@ local function switchTab(tabName)
     tabs[tabName].icon.TextColor3 = Color3.fromRGB(255, 255, 255)
     tabs[tabName].name.TextColor3 = Color3.fromRGB(255, 255, 255)
     frames[tabName].Visible = true
-    currentTab = tabName
 end
 
 CombatTab.MouseButton1Click:Connect(function() switchTab("Combat") end)
@@ -531,16 +521,30 @@ end
 -- ABA COMBAT
 -- ==================
 
-createSlider(CombatFrame, "Tamanho da Hitbox (Caixa)", 1, 100, 25, function(value)
-    _G.HeadSize = value
+createSlider(CombatFrame, "Tamanho da Hitbox", 1, 100, 25, function(value)
+    _G.Config.HeadSize = value
 end, 1)
 
 createToggle(CombatFrame, "Hitbox no Time", false, function(value)
-    _G.HitboxTeam = value
+    _G.Config.HitboxTeam = value
 end, 2)
 
 createToggle(CombatFrame, "Ativar Hitbox", false, function(value)
-    _G.HitboxEnabled = value
+    _G.Config.HitboxEnabled = value
+    
+    if not value then
+        -- Restaurar todos os tamanhos originais
+        for player, data in pairs(originalSizes) do
+            if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                local hrp = player.Character.HumanoidRootPart
+                hrp.Size = data.Size
+                hrp.Transparency = data.Transparency
+                hrp.Material = data.Material
+                hrp.CanCollide = data.CanCollide
+            end
+        end
+        originalSizes = {}
+    end
 end, 3)
 
 -- ==================
@@ -548,10 +552,9 @@ end, 3)
 -- ==================
 
 createToggle(PlayerFrame, "Noclip", false, function(value)
-    _G.NoclipEnabled = value
+    _G.Config.NoclipEnabled = value
     
     if value then
-        -- Ativar Noclip
         noclipConnection = RunService.Stepped:Connect(function()
             pcall(function()
                 if LocalPlayer.Character then
@@ -564,13 +567,11 @@ createToggle(PlayerFrame, "Noclip", false, function(value)
             end)
         end)
     else
-        -- Desativar Noclip
         if noclipConnection then
             noclipConnection:Disconnect()
             noclipConnection = nil
         end
         
-        -- Restaurar colisões
         pcall(function()
             if LocalPlayer.Character then
                 for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -584,23 +585,23 @@ createToggle(PlayerFrame, "Noclip", false, function(value)
 end, 1)
 
 createToggle(PlayerFrame, "Anti-AFK", true, function(value)
-    _G.AntiAFKEnabled = value
+    _G.Config.AntiAFKEnabled = value
 end, 2)
 
 createSlider(PlayerFrame, "Velocidade", 16, 100, 16, function(value)
-    _G.SpeedValue = value
+    _G.Config.SpeedValue = value
 end, 3)
 
 createToggle(PlayerFrame, "Ativar Speed", false, function(value)
-    _G.SpeedEnabled = value
+    _G.Config.SpeedEnabled = value
 end, 4)
 
 createSlider(PlayerFrame, "Força do Pulo", 50, 150, 50, function(value)
-    _G.JumpValue = value
+    _G.Config.JumpValue = value
 end, 5)
 
 createToggle(PlayerFrame, "Ativar Jump", false, function(value)
-    _G.JumpEnabled = value
+    _G.Config.JumpEnabled = value
 end, 6)
 
 createButton(PlayerFrame, "🔫 Pegar Arma AS VAL", function()
@@ -641,15 +642,15 @@ end, 7)
 -- ==================
 
 createToggle(VisualFrame, "ESP nos Jogadores", false, function(value)
-    _G.ESPEnabled = value
+    _G.Config.ESPEnabled = value
 end, 1)
 
 createToggle(VisualFrame, "ESP no Meu Time", false, function(value)
-    _G.TeamESPEnabled = value
+    _G.Config.TeamESPEnabled = value
 end, 2)
 
 createToggle(VisualFrame, "Fullbright", false, function(value)
-    _G.FullbrightEnabled = value
+    _G.Config.FullbrightEnabled = value
     if value then
         Lighting.Ambient = Color3.new(1, 1, 1)
         Lighting.Brightness = 2
@@ -678,7 +679,7 @@ end, 3)
 -- ==================
 
 createToggle(VolverFrame, "🎖️ Ativar Auto Volver", false, function(value)
-    _G.AutoVolverEnabled = value
+    _G.Config.AutoVolverEnabled = value
 end, 1)
 
 local CommanderLabel = Instance.new("TextLabel")
@@ -739,7 +740,7 @@ statusCorner.Parent = StatusLabel
 
 -- Anti-AFK
 LocalPlayer.Idled:Connect(function()
-    if _G.AntiAFKEnabled then
+    if _G.Config.AntiAFKEnabled then
         VirtualUser:CaptureController()
         VirtualUser:ClickButton2(Vector2.new())
     end
@@ -750,13 +751,13 @@ RunService.RenderStepped:Connect(function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             local humanoid = LocalPlayer.Character.Humanoid
-            if _G.SpeedEnabled then
-                humanoid.WalkSpeed = _G.SpeedValue
+            if _G.Config.SpeedEnabled then
+                humanoid.WalkSpeed = _G.Config.SpeedValue
             else
                 humanoid.WalkSpeed = 16
             end
-            if _G.JumpEnabled then
-                humanoid.JumpPower = _G.JumpValue
+            if _G.Config.JumpEnabled then
+                humanoid.JumpPower = _G.Config.JumpValue
             else
                 humanoid.JumpPower = 50
             end
@@ -764,47 +765,82 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Hitbox (HumanoidRootPart - Caixa) - VERSÃO CORRIGIDA
-game:GetService('RunService').RenderStepped:connect(function()
-    if _G.HitboxEnabled then
-        for i,v in next, game:GetService('Players'):GetPlayers() do
-            if v.Name ~= game:GetService('Players').LocalPlayer.Name then
-                pcall(function()
-                    local shouldApply = false
-                    if _G.HitboxTeam then
-                        shouldApply = true
-                    else
-                        if v.Team ~= LocalPlayer.Team then
-                            shouldApply = true
-                        end
-                    end
-                    
-                    if shouldApply then
-                        v.Character.HumanoidRootPart.Size = Vector3.new(_G.HeadSize,_G.HeadSize,_G.HeadSize)
-                        v.Character.HumanoidRootPart.Transparency = 0.7
-                        v.Character.HumanoidRootPart.Material = "Neon"
-                        v.Character.HumanoidRootPart.CanCollide = false
-                        -- Cor do time
-                        if v.Team then
-                            v.Character.HumanoidRootPart.BrickColor = v.Team.TeamColor
-                        else
-                            v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
-                        end
-                    end
-                end)
-            end
+-- Sistema Hitbox CORRIGIDO
+local function applyHitbox(player)
+    if not player.Character then return end
+    if player == LocalPlayer then return end
+    
+    local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    -- Salvar tamanho original apenas uma vez
+    if not originalSizes[player] then
+        originalSizes[player] = {
+            Size = hrp.Size,
+            Transparency = hrp.Transparency,
+            Material = hrp.Material,
+            CanCollide = hrp.CanCollide
+        }
+    end
+    
+    -- Verificar se deve aplicar hitbox
+    local shouldApply = false
+    
+    if _G.Config.HitboxTeam then
+        shouldApply = true
+    else
+        if player.Team ~= LocalPlayer.Team then
+            shouldApply = true
+        end
+    end
+    
+    -- Aplicar ou restaurar
+    if _G.Config.HitboxEnabled and shouldApply then
+        hrp.Size = Vector3.new(_G.Config.HeadSize, _G.Config.HeadSize, _G.Config.HeadSize)
+        hrp.Transparency = 0.7
+        hrp.Material = Enum.Material.Neon
+        hrp.CanCollide = false
+        
+        if player.Team then
+            hrp.BrickColor = player.Team.TeamColor
+        else
+            hrp.BrickColor = BrickColor.new("Really blue")
+        end
+    else
+        -- Restaurar valores originais
+        if originalSizes[player] then
+            hrp.Size = originalSizes[player].Size
+            hrp.Transparency = originalSizes[player].Transparency
+            hrp.Material = originalSizes[player].Material
+            hrp.CanCollide = originalSizes[player].CanCollide
+        end
+    end
+end
+
+-- Aplicar hitbox continuamente
+RunService.RenderStepped:Connect(function()
+    if _G.Config.HitboxEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            pcall(function()
+                applyHitbox(player)
+            end)
         end
     end
 end)
 
--- ESP
+-- Limpar dados quando jogador sair
+Players.PlayerRemoving:Connect(function(player)
+    originalSizes[player] = nil
+end)
+
+-- ESP System
 local function createESP(player)
     if player == LocalPlayer then return end
     
     local function addESP(character)
         if ESPObjects[player] then
             for _, obj in pairs(ESPObjects[player]) do
-                obj:Destroy()
+                pcall(function() obj:Destroy() end)
             end
         end
         
@@ -821,9 +857,9 @@ local function createESP(player)
         local function updateESP()
             if not character or not character.Parent then return end
             
-            local shouldShow = _G.ESPEnabled
+            local shouldShow = _G.Config.ESPEnabled
             
-            if not _G.TeamESPEnabled and player.Team == LocalPlayer.Team then
+            if not _G.Config.TeamESPEnabled and player.Team == LocalPlayer.Team then
                 shouldShow = false
             end
             
@@ -848,7 +884,7 @@ end
 local function removeESP(player)
     if ESPObjects[player] then
         for _, obj in pairs(ESPObjects[player]) do
-            obj:Destroy()
+            pcall(function() obj:Destroy() end)
         end
         ESPObjects[player] = nil
     end
@@ -864,8 +900,6 @@ Players.PlayerRemoving:Connect(removeESP)
 -- ==================
 -- SISTEMA VOLVER
 -- ==================
-
-local isRotating = false
 
 local function updateStatus(text, color)
     StatusLabel.Text = text
@@ -913,7 +947,7 @@ local function createPlayerButton(player)
         Button.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
         Indicator.Visible = true
         
-        _G.SelectedCommander = player
+        _G.Config.SelectedCommander = player
         CommanderLabel.Text = "👤 Comandante: " .. player.Name
         CommanderLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
         updateStatus("✅ Aguardando comandos de " .. player.Name, Color3.fromRGB(100, 255, 100))
@@ -977,11 +1011,11 @@ local function rotateCharacter(degrees)
 end
 
 local function processCommand(message, speaker)
-    if not _G.SelectedCommander or speaker.UserId ~= _G.SelectedCommander.UserId then
+    if not _G.Config.SelectedCommander or speaker.UserId ~= _G.Config.SelectedCommander.UserId then
         return
     end
     
-    if not _G.AutoVolverEnabled then return end
+    if not _G.Config.AutoVolverEnabled then return end
     
     local angle = VolverCommands[message]
     
@@ -994,8 +1028,8 @@ local function processCommand(message, speaker)
             if success then
                 updateStatus(string.format("🔄 Executado: %d°", math.abs(angle)), Color3.fromRGB(100, 255, 100))
                 task.wait(1)
-                if _G.SelectedCommander then
-                    updateStatus("✅ Aguardando comandos de " .. _G.SelectedCommander.Name, Color3.fromRGB(100, 255, 100))
+                if _G.Config.SelectedCommander then
+                    updateStatus("✅ Aguardando comandos de " .. _G.Config.SelectedCommander.Name, Color3.fromRGB(100, 255, 100))
                 end
             end
         end)
@@ -1028,8 +1062,8 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 Players.PlayerRemoving:Connect(function(player)
-    if _G.SelectedCommander and player == _G.SelectedCommander then
-        _G.SelectedCommander = nil
+    if _G.Config.SelectedCommander and player == _G.Config.SelectedCommander then
+        _G.Config.SelectedCommander = nil
         CommanderLabel.Text = "👤 Comandante: Nenhum"
         CommanderLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
         updateStatus("⚠️ Comandante saiu", Color3.fromRGB(255, 200, 100))
@@ -1045,7 +1079,6 @@ updatePlayerList()
 -- ==================
 
 MinimizeButton.MouseButton1Click:Connect(function()
-    -- Animação de saída
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
@@ -1054,10 +1087,6 @@ MinimizeButton.MouseButton1Click:Connect(function()
     MainFrame.Visible = false
     MinimizedButton.Visible = true
     
-    -- Iniciar efeito de pulso
-    spawn(pulseEffect)
-    
-    -- Animação de entrada do botão minimizado
     MinimizedButton.Size = UDim2.new(0, 0, 0, 0)
     MinimizedButton.Position = UDim2.new(1, -45, 0, 55)
     TweenService:Create(MinimizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
@@ -1065,7 +1094,6 @@ MinimizeButton.MouseButton1Click:Connect(function()
 end)
 
 MinimizedButton.MouseButton1Click:Connect(function()
-    -- Animação de saída do botão
     TweenService:Create(MinimizedButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
@@ -1074,7 +1102,6 @@ MinimizedButton.MouseButton1Click:Connect(function()
     MinimizedButton.Visible = false
     MainFrame.Visible = true
     
-    -- Animação de entrada da GUI
     MainFrame.Size = UDim2.new(0, 0, 0, 0)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
@@ -1082,12 +1109,23 @@ MinimizedButton.MouseButton1Click:Connect(function()
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
-    _G.HitboxEnabled = false
+    _G.Config.HitboxEnabled = false
+    
+    -- Restaurar todos os tamanhos
+    for player, data in pairs(originalSizes) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = player.Character.HumanoidRootPart
+            hrp.Size = data.Size
+            hrp.Transparency = data.Transparency
+            hrp.Material = data.Material
+            hrp.CanCollide = data.CanCollide
+        end
+    end
+    
     if noclipConnection then
         noclipConnection:Disconnect()
     end
     
-    -- Animação de fechamento
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
@@ -1103,4 +1141,4 @@ TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
 -- Iniciar na aba Combat
 switchTab("Combat")
 
-print("✅ Combat GUI Mobile Loaded!")
+print("✅ Combat GUI Mobile FIXED - Loaded Successfully!")
