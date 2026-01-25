@@ -764,11 +764,11 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Hitbox (HumanoidRootPart - Caixa)
-RunService.RenderStepped:Connect(function()
+-- Hitbox (HumanoidRootPart - Caixa) - VERSÃO CORRIGIDA
+game:GetService('RunService').RenderStepped:connect(function()
     if _G.HitboxEnabled then
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Name ~= LocalPlayer.Name then
+        for i,v in next, game:GetService('Players'):GetPlayers() do
+            if v.Name ~= game:GetService('Players').LocalPlayer.Name then
                 pcall(function()
                     local shouldApply = false
                     if _G.HitboxTeam then
@@ -779,16 +779,16 @@ RunService.RenderStepped:Connect(function()
                         end
                     end
                     
-                    if shouldApply and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = v.Character.HumanoidRootPart
-                        hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                        hrp.Transparency = 0.7
-                        hrp.Material = Enum.Material.Neon
-                        hrp.CanCollide = false
+                    if shouldApply then
+                        v.Character.HumanoidRootPart.Size = Vector3.new(_G.HeadSize,_G.HeadSize,_G.HeadSize)
+                        v.Character.HumanoidRootPart.Transparency = 0.7
+                        v.Character.HumanoidRootPart.Material = "Neon"
+                        v.Character.HumanoidRootPart.CanCollide = false
+                        -- Cor do time
                         if v.Team then
-                            hrp.BrickColor = v.Team.TeamColor
+                            v.Character.HumanoidRootPart.BrickColor = v.Team.TeamColor
                         else
-                            hrp.BrickColor = BrickColor.new("Really red")
+                            v.Character.HumanoidRootPart.BrickColor = BrickColor.new("Really blue")
                         end
                     end
                 end)
