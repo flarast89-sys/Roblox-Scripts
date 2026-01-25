@@ -531,7 +531,7 @@ end
 -- ABA COMBAT
 -- ==================
 
-createSlider(CombatFrame, "Tamanho Hitbox Cabeça", 1, 100, 25, function(value)
+createSlider(CombatFrame, "Tamanho da Hitbox (Caixa)", 1, 100, 25, function(value)
     _G.HeadSize = value
 end, 1)
 
@@ -764,7 +764,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Hitbox (APENAS CABEÇA)
+-- Hitbox (HumanoidRootPart - Caixa)
 RunService.RenderStepped:Connect(function()
     if _G.HitboxEnabled then
         for _, v in pairs(Players:GetPlayers()) do
@@ -779,34 +779,17 @@ RunService.RenderStepped:Connect(function()
                         end
                     end
                     
-                    if shouldApply and v.Character and v.Character:FindFirstChild("Head") then
-                        local head = v.Character.Head
-                        head.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                        head.Transparency = 0.7
-                        head.Material = Enum.Material.Neon
-                        head.CanCollide = false
-                        head.Massless = true
+                    if shouldApply and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+                        local hrp = v.Character.HumanoidRootPart
+                        hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                        hrp.Transparency = 0.7
+                        hrp.Material = Enum.Material.Neon
+                        hrp.CanCollide = false
                         if v.Team then
-                            head.BrickColor = v.Team.TeamColor
+                            hrp.BrickColor = v.Team.TeamColor
                         else
-                            head.BrickColor = BrickColor.new("Really red")
+                            hrp.BrickColor = BrickColor.new("Really red")
                         end
-                    end
-                end)
-            end
-        end
-    else
-        -- Restaurar tamanho normal quando desativar
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Name ~= LocalPlayer.Name then
-                pcall(function()
-                    if v.Character and v.Character:FindFirstChild("Head") then
-                        local head = v.Character.Head
-                        head.Size = Vector3.new(2, 1, 1)
-                        head.Transparency = 0
-                        head.Material = Enum.Material.Plastic
-                        head.CanCollide = false
-                        head.Massless = true
                     end
                 end)
             end
