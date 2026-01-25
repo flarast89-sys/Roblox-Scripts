@@ -785,11 +785,28 @@ RunService.RenderStepped:Connect(function()
                         head.Transparency = 0.7
                         head.Material = Enum.Material.Neon
                         head.CanCollide = false
+                        head.Massless = true
                         if v.Team then
                             head.BrickColor = v.Team.TeamColor
                         else
                             head.BrickColor = BrickColor.new("Really red")
                         end
+                    end
+                end)
+            end
+        end
+    else
+        -- Restaurar tamanho normal quando desativar
+        for _, v in pairs(Players:GetPlayers()) do
+            if v.Name ~= LocalPlayer.Name then
+                pcall(function()
+                    if v.Character and v.Character:FindFirstChild("Head") then
+                        local head = v.Character.Head
+                        head.Size = Vector3.new(2, 1, 1)
+                        head.Transparency = 0
+                        head.Material = Enum.Material.Plastic
+                        head.CanCollide = false
+                        head.Massless = true
                     end
                 end)
             end
