@@ -665,17 +665,22 @@ end)
 
 -- Noclip
 RunService.Stepped:Connect(function()
-    if _G.NoclipEnabled then
-        pcall(function()
-            if LocalPlayer.Character then
-                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then
+    pcall(function()
+        if LocalPlayer.Character then
+            for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    if _G.NoclipEnabled then
                         part.CanCollide = false
+                    else
+                        -- Reativa colisão quando desabilitar (exceto HumanoidRootPart)
+                        if part.Name ~= "HumanoidRootPart" then
+                            part.CanCollide = true
+                        end
                     end
                 end
             end
-        end)
-    end
+        end
+    end)
 end)
 
 -- Speed e Jump
