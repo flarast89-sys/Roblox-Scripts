@@ -734,6 +734,25 @@ local statusCorner = Instance.new("UICorner")
 statusCorner.CornerRadius = UDim.new(0, 10)
 statusCorner.Parent = StatusLabel
 
+-- Monitor de Comandos (mostra últimos comandos detectados)
+local CommandMonitor = Instance.new("TextLabel")
+CommandMonitor.Size = UDim2.new(1, 0, 0, 70)
+CommandMonitor.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+CommandMonitor.Text = "📡 Monitor de Comandos\n\nNenhum comando detectado"
+CommandMonitor.TextColor3 = Color3.fromRGB(150, 150, 170)
+CommandMonitor.TextSize = 11
+CommandMonitor.Font = Enum.Font.Code
+CommandMonitor.TextWrapped = true
+CommandMonitor.TextYAlignment = Enum.TextYAlignment.Top
+CommandMonitor.LayoutOrder = 5
+CommandMonitor.Parent = VolverFrame
+
+local monitorCorner = Instance.new("UICorner")
+monitorCorner.CornerRadius = UDim.new(0, 10)
+monitorCorner.Parent = CommandMonitor
+
+local commandHistory = {}
+
 -- ==================
 -- SISTEMAS
 -- ==================
@@ -1011,6 +1030,29 @@ local function rotateCharacter(degrees)
 end
 
 local function processCommand(message, speaker)
+    -- Adicionar ao monitor
+    table.insert(commandHistory, 1, {
+        player = speaker.Name,
+        message = message,
+        time = os.date("%H:%M:%S")
+    })
+    
+    if #commandHistory > 3 then
+        table.remove(commandHistory, 4)
+    end
+    
+    local monitorText = "📡 Monitor de Comandos\n\n"
+    for i, cmd in ipairs(commandHistory) do
+        monitorText = monitorText .. string.format("[%s] %s: %s\n", cmd.time, cmd.player, cmd.message)
+    end
+    CommandMonitor.Text = monitorText
+    CommandMonitor.TextColor3 = Color3.fromRGB(100, 255, 100)
+    
+    task.delay(2, function()
+        CommandMonitor.TextColor3 = Color3.fromRGB(150, 150, 170)
+    end)
+    
+    -- Processar comando
     if not _G.Config.SelectedCommander or speaker.UserId ~= _G.Config.SelectedCommander.UserId then
         return
     end
@@ -1036,6 +1078,7 @@ local function processCommand(message, speaker)
     end
 end
 
+-- Detectar comandos no TextChat (chat novo)
 pcall(function()
     TextChatService.MessageReceived:Connect(function(message)
         local speaker = Players:GetPlayerByUserId(message.TextSource.UserId)
@@ -1045,11 +1088,58 @@ pcall(function()
     end)
 end)
 
+-- Detectar comandos no Chat Legado
 local function connectPlayerChat(player)
     player.Chatted:Connect(function(message)
         processCommand(message, player)
     end)
 end
+
+-- Detectar comandos via Remote (cmdbar/cmdbar2)
+pcall(function()
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local remotes = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+    
+    if remotes then
+        local onMessageDoneFiltering = remotes:FindFirstChild("OnMessageDoneFiltering")
+        
+        if onMessageDoneFiltering then
+            onMessageDoneFiltering.OnClientEvent:Connect(function(messageData)
+                if messageData and messageData.FromSpeaker then
+                    local speaker = Players:FindFirstChild(messageData.FromSpeaker)
+                    if speaker and messageData.Message then
+                        processCommand(messageData.Message, speaker)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Sistema alternativo para capturar mensagens de cmdbar2
+pcall(function()
+    for _, obj in pairs(game:GetDescendants()) do
+        if obj:IsA("RemoteEvent") and (obj.Name:lower():find("chat") or obj.Name:lower():find("message")) then
+            obj.OnClientEvent:Connect(function(...)
+                local args = {...}
+                for _, arg in pairs(args) do
+                    if type(arg) == "table" then
+                        if arg.Message and arg.FromSpeaker then
+                            local speaker = Players:FindFirstChild(arg.FromSpeaker)
+                            if speaker then
+                                processCommand(arg.Message, speaker)
+                            end
+                        end
+                    elseif type(arg) == "string" then
+                        if _G.Config.SelectedCommander then
+                            processCommand(arg, _G.Config.SelectedCommander)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
 
 for _, player in pairs(Players:GetPlayers()) do
     connectPlayerChat(player)
