@@ -1,4 +1,4 @@
--- Combat GUI Script - Versão Completa com ESP e Fullbright
+-- Combat GUI Completo - Mobile & PC Optimizado
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,8 +9,11 @@ local TextChatService = game:GetService("TextChatService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Configurações globais
-_G.HeadSize = 20
+-- Detectar plataforma
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+
+-- Configurações
+_G.HeadSize = 25
 _G.HitboxEnabled = false
 _G.HitboxTeam = false
 _G.NoclipEnabled = false
@@ -22,36 +25,57 @@ _G.AntiAFKEnabled = true
 _G.ESPEnabled = false
 _G.TeamESPEnabled = false
 _G.FullbrightEnabled = false
+_G.SilentAimEnabled = false
+_G.HeadshotEnabled = false
 
--- Configurações Auto Volver
+-- Configurações Volver
 _G.SelectedCommander = nil
 _G.AutoVolverEnabled = true
-_G.RotationSpeed = 2
-_G.CommandDelay = 1
 
--- Comandos do Volver
+-- Comandos Volver
 local VolverCommands = {
     ["Direita, volver."] = -90,
-    ["Esquerda, volver."] = 90,
-    ["Direita, inclinar."] = -45,
-    ["Esquerda, inclinar."] = 45,
-    ["Retaguarda, volver."] = 180,
     ["/a Direita, volver."] = -90,
-    ["/a Esquerda, volver."] = 90,
-    ["/a Direita, inclinar."] = -45,
-    ["/a Esquerda, inclinar."] = 45,
-    ["/a Retaguarda, volver."] = 180,
     ["/A Direita, volver."] = -90,
+    ["/h Direita, volver."] = -90,
+    ["/H Direita, volver."] = -90,
+    [";h Direita, volver."] = -90,
+    [";H Direita, volver."] = -90,
+    
+    ["Esquerda, volver."] = 90,
+    ["/a Esquerda, volver."] = 90,
     ["/A Esquerda, volver."] = 90,
+    ["/h Esquerda, volver."] = 90,
+    ["/H Esquerda, volver."] = 90,
+    [";h Esquerda, volver."] = 90,
+    [";H Esquerda, volver."] = 90,
+    
+    ["Direita, inclinar."] = -45,
+    ["/a Direita, inclinar."] = -45,
     ["/A Direita, inclinar."] = -45,
+    ["/h Direita, inclinar."] = -45,
+    ["/H Direita, inclinar."] = -45,
+    [";h Direita, inclinar."] = -45,
+    [";H Direita, inclinar."] = -45,
+    
+    ["Esquerda, inclinar."] = 45,
+    ["/a Esquerda, inclinar."] = 45,
     ["/A Esquerda, inclinar."] = 45,
-    ["/A Retaguarda, volver."] = 180
+    ["/h Esquerda, inclinar."] = 45,
+    ["/H Esquerda, inclinar."] = 45,
+    [";h Esquerda, inclinar."] = 45,
+    [";H Esquerda, inclinar."] = 45,
+    
+    ["Retaguarda, volver."] = 180,
+    ["/a Retaguarda, volver."] = 180,
+    ["/A Retaguarda, volver."] = 180,
+    ["/h Retaguarda, volver."] = 180,
+    ["/H Retaguarda, volver."] = 180,
+    [";h Retaguarda, volver."] = 180,
+    [";H Retaguarda, volver."] = 180,
 }
 
--- Variáveis ESP
 local ESPObjects = {}
-
--- Variáveis Fullbright
 local originalLightingSettings = {
     Ambient = Lighting.Ambient,
     Brightness = Lighting.Brightness,
@@ -64,7 +88,7 @@ local originalLightingSettings = {
     GlobalShadows = Lighting.GlobalShadows
 }
 
--- Criar ScreenGui
+-- Criar GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CombatGUI"
 ScreenGui.ResetOnSpawn = false
@@ -73,71 +97,58 @@ ScreenGui.Parent = PlayerGui
 -- Frame principal
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-
--- Detectar se é mobile ou PC
-local UserInputService = game:GetService("UserInputService")
-local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-
 if isMobile then
-    -- Tamanho para Mobile (menor)
-    MainFrame.Size = UDim2.new(0, 340, 0, 420)
-    MainFrame.Position = UDim2.new(0.5, -170, 0.5, -210)
+    MainFrame.Size = UDim2.new(0, 350, 0, 500)
+    MainFrame.Position = UDim2.new(0.5, -175, 0.5, -250)
 else
-    -- Tamanho para PC
-    MainFrame.Size = UDim2.new(0, 400, 0, 480)
-    MainFrame.Position = UDim2.new(0.5, -200, 0.5, -240)
+    MainFrame.Size = UDim2.new(0, 420, 0, 550)
+    MainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
 end
-
-MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 10)
-UICorner.Parent = MainFrame
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 12)
+MainCorner.Parent = MainFrame
 
 -- Título
 local Title = Instance.new("TextLabel")
-Title.Name = "Title"
-Title.Size = UDim2.new(1, -80, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Title.Size = UDim2.new(1, -80, 0, 45)
+Title.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Title.BorderSizePixel = 0
-Title.Text = "Combat GUI"
+Title.Text = "⚔️ COMBAT GUI"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = isMobile and 16 or 20
+Title.TextSize = isMobile and 18 or 22
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
 local TitleCorner = Instance.new("UICorner")
-TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.CornerRadius = UDim.new(0, 12)
 TitleCorner.Parent = Title
 
 -- Botão Minimizar
 local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Name = "MinimizeButton"
 MinimizeButton.Size = UDim2.new(0, 35, 0, 35)
-MinimizeButton.Position = UDim2.new(1, -75, 0, 2.5)
+MinimizeButton.Position = UDim2.new(1, -75, 0, 5)
 MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MinimizeButton.BorderSizePixel = 0
 MinimizeButton.Text = "—"
 MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizeButton.TextSize = 20
 MinimizeButton.Font = Enum.Font.GothamBold
 MinimizeButton.Parent = MainFrame
 
-local MinimizeCorner = Instance.new("UICorner")
-MinimizeCorner.CornerRadius = UDim.new(0, 8)
-MinimizeCorner.Parent = MinimizeButton
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 8)
+MinCorner.Parent = MinimizeButton
 
 -- Botão Fechar
 local CloseButton = Instance.new("TextButton")
-CloseButton.Name = "CloseButton"
 CloseButton.Size = UDim2.new(0, 35, 0, 35)
-CloseButton.Position = UDim2.new(1, -37.5, 0, 2.5)
+CloseButton.Position = UDim2.new(1, -37.5, 0, 5)
 CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-CloseButton.BorderSizePixel = 0
 CloseButton.Text = "X"
 CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize = 20
@@ -150,11 +161,9 @@ CloseCorner.Parent = CloseButton
 
 -- Bolinha minimizada
 local MinimizedBall = Instance.new("TextButton")
-MinimizedBall.Name = "MinimizedBall"
 MinimizedBall.Size = UDim2.new(0, 60, 0, 60)
 MinimizedBall.Position = UDim2.new(1, -70, 0, 10)
-MinimizedBall.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MinimizedBall.BorderSizePixel = 0
+MinimizedBall.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MinimizedBall.Text = "⚔️"
 MinimizedBall.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizedBall.TextSize = 30
@@ -168,146 +177,87 @@ BallCorner.Parent = MinimizedBall
 
 -- Container de Abas
 local TabContainer = Instance.new("Frame")
-TabContainer.Name = "TabContainer"
-TabContainer.Size = UDim2.new(1, 0, 0, 35)
-TabContainer.Position = UDim2.new(0, 0, 0, 45)
-TabContainer.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-TabContainer.BorderSizePixel = 0
+TabContainer.Size = UDim2.new(1, -10, 0, 40)
+TabContainer.Position = UDim2.new(0, 5, 0, 50)
+TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
--- Botões das Abas
-local CombatTab = Instance.new("TextButton")
-CombatTab.Name = "CombatTab"
-CombatTab.Size = UDim2.new(0.25, -3, 1, 0)
-CombatTab.Position = UDim2.new(0, 2, 0, 0)
-CombatTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-CombatTab.BorderSizePixel = 0
-CombatTab.Text = isMobile and "⚔️" or "⚔️ COMBATE"
-CombatTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-CombatTab.TextSize = isMobile and 16 or 12
-CombatTab.Font = Enum.Font.GothamBold
-CombatTab.Parent = TabContainer
+-- Abas
+local tabSize = isMobile and 0.25 or 0.25
+local tabs = {}
 
-local CombatTabCorner = Instance.new("UICorner")
-CombatTabCorner.CornerRadius = UDim.new(0, 6)
-CombatTabCorner.Parent = CombatTab
+local function createTab(name, emoji, position)
+    local tab = Instance.new("TextButton")
+    tab.Name = name .. "Tab"
+    tab.Size = UDim2.new(tabSize, -4, 1, 0)
+    tab.Position = UDim2.new(position * tabSize, 2, 0, 0)
+    tab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    tab.Text = isMobile and emoji or (emoji .. " " .. name:upper())
+    tab.TextColor3 = Color3.fromRGB(150, 150, 150)
+    tab.TextSize = isMobile and 18 or 11
+    tab.Font = Enum.Font.GothamBold
+    tab.Parent = TabContainer
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = tab
+    
+    tabs[name] = tab
+    return tab
+end
 
-local PlayerTab = Instance.new("TextButton")
-PlayerTab.Name = "PlayerTab"
-PlayerTab.Size = UDim2.new(0.25, -3, 1, 0)
-PlayerTab.Position = UDim2.new(0.25, 1, 0, 0)
-PlayerTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-PlayerTab.BorderSizePixel = 0
-PlayerTab.Text = isMobile and "👤" or "👤 PLAYER"
-PlayerTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-PlayerTab.TextSize = isMobile and 16 or 12
-PlayerTab.Font = Enum.Font.GothamBold
-PlayerTab.Parent = TabContainer
-
-local PlayerTabCorner = Instance.new("UICorner")
-PlayerTabCorner.CornerRadius = UDim.new(0, 6)
-PlayerTabCorner.Parent = PlayerTab
-
-local VisualTab = Instance.new("TextButton")
-VisualTab.Name = "VisualTab"
-VisualTab.Size = UDim2.new(0.25, -3, 1, 0)
-VisualTab.Position = UDim2.new(0.5, 0, 0, 0)
-VisualTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-VisualTab.BorderSizePixel = 0
-VisualTab.Text = isMobile and "👁️" or "👁️ VISUAL"
-VisualTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-VisualTab.TextSize = isMobile and 16 or 12
-VisualTab.Font = Enum.Font.GothamBold
-VisualTab.Parent = TabContainer
-
-local VisualTabCorner = Instance.new("UICorner")
-VisualTabCorner.CornerRadius = UDim.new(0, 6)
-VisualTabCorner.Parent = VisualTab
-
-local VolverTab = Instance.new("TextButton")
-VolverTab.Name = "VolverTab"
-VolverTab.Size = UDim2.new(0.25, -3, 1, 0)
-VolverTab.Position = UDim2.new(0.75, 1, 0, 0)
-VolverTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-VolverTab.BorderSizePixel = 0
-VolverTab.Text = isMobile and "🎖️" or "🎖️ VOLVER"
-VolverTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-VolverTab.TextSize = isMobile and 16 or 12
-VolverTab.Font = Enum.Font.GothamBold
-VolverTab.Parent = TabContainer
-
-local VolverTabCorner = Instance.new("UICorner")
-VolverTabCorner.CornerRadius = UDim.new(0, 6)
-VolverTabCorner.Parent = VolverTab
+local CombatTab = createTab("Combat", "⚔️", 0)
+local PlayerTab = createTab("Player", "👤", 1)
+local VisualTab = createTab("Visual", "👁️", 2)
+local VolverTab = createTab("Volver", "🎖️", 3)
 
 -- Frames das abas
-local CombatFrame = Instance.new("Frame")
-CombatFrame.Name = "CombatFrame"
-CombatFrame.Size = UDim2.new(1, 0, 1, -80)
-CombatFrame.Position = UDim2.new(0, 0, 0, 80)
-CombatFrame.BackgroundTransparency = 1
+local frames = {}
+
+local function createFrame(name)
+    local frame = Instance.new("ScrollingFrame")
+    frame.Name = name .. "Frame"
+    frame.Size = UDim2.new(1, -20, 1, -105)
+    frame.Position = UDim2.new(0, 10, 0, 95)
+    frame.BackgroundTransparency = 1
+    frame.BorderSizePixel = 0
+    frame.ScrollBarThickness = 6
+    frame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    frame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    frame.Visible = false
+    frame.Parent = MainFrame
+    
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = frame
+    
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        frame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+    end)
+    
+    frames[name] = frame
+    return frame
+end
+
+local CombatFrame = createFrame("Combat")
+local PlayerFrame = createFrame("Player")
+local VisualFrame = createFrame("Visual")
+local VolverFrame = createFrame("Volver")
+
 CombatFrame.Visible = true
-CombatFrame.Parent = MainFrame
-
-local PlayerFrame = Instance.new("Frame")
-PlayerFrame.Name = "PlayerFrame"
-PlayerFrame.Size = UDim2.new(1, 0, 1, -80)
-PlayerFrame.Position = UDim2.new(0, 0, 0, 80)
-PlayerFrame.BackgroundTransparency = 1
-PlayerFrame.Visible = false
-PlayerFrame.Parent = MainFrame
-
-local VisualFrame = Instance.new("Frame")
-VisualFrame.Name = "VisualFrame"
-VisualFrame.Size = UDim2.new(1, 0, 1, -80)
-VisualFrame.Position = UDim2.new(0, 0, 0, 80)
-VisualFrame.BackgroundTransparency = 1
-VisualFrame.Visible = false
-VisualFrame.Parent = MainFrame
-
-local VolverFrame = Instance.new("Frame")
-VolverFrame.Name = "VolverFrame"
-VolverFrame.Size = UDim2.new(1, 0, 1, -80)
-VolverFrame.Position = UDim2.new(0, 0, 0, 80)
-VolverFrame.BackgroundTransparency = 1
-VolverFrame.Visible = false
-VolverFrame.Parent = MainFrame
 
 -- Função trocar abas
-local function switchTab(tab)
-    -- Reset cores
-    CombatTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    CombatTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    PlayerTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    PlayerTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    VisualTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    VisualTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    VolverTab.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-    VolverTab.TextColor3 = Color3.fromRGB(180, 180, 180)
-    
-    -- Esconder todos
-    CombatFrame.Visible = false
-    PlayerFrame.Visible = false
-    VisualFrame.Visible = false
-    VolverFrame.Visible = false
-    
-    if tab == "Combat" then
-        CombatTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        CombatTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        CombatFrame.Visible = true
-    elseif tab == "Player" then
-        PlayerTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        PlayerTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        PlayerFrame.Visible = true
-    elseif tab == "Visual" then
-        VisualTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        VisualTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        VisualFrame.Visible = true
-    else
-        VolverTab.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        VolverTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-        VolverFrame.Visible = true
+local function switchTab(tabName)
+    for name, tab in pairs(tabs) do
+        tab.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        tab.TextColor3 = Color3.fromRGB(150, 150, 150)
+        frames[name].Visible = false
     end
+    
+    tabs[tabName].BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    tabs[tabName].TextColor3 = Color3.fromRGB(255, 255, 255)
+    frames[tabName].Visible = true
 end
 
 CombatTab.MouseButton1Click:Connect(function() switchTab("Combat") end)
@@ -315,109 +265,126 @@ PlayerTab.MouseButton1Click:Connect(function() switchTab("Player") end)
 VisualTab.MouseButton1Click:Connect(function() switchTab("Visual") end)
 VolverTab.MouseButton1Click:Connect(function() switchTab("Volver") end)
 
+-- Função criar botão
+local function createButton(parent, text, layoutOrder)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(1, 0, 0, isMobile and 45 or 50)
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = isMobile and 14 or 16
+    button.Font = Enum.Font.GothamBold
+    button.LayoutOrder = layoutOrder
+    button.Parent = parent
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = button
+    
+    return button
+end
+
+-- Função criar label
+local function createLabel(parent, text, layoutOrder)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 0, isMobile and 28 or 32)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.TextSize = isMobile and 13 or 15
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.LayoutOrder = layoutOrder
+    label.Parent = parent
+    
+    return label
+end
+
+-- Função criar slider
+local function createSlider(parent, min, max, default, callback, layoutOrder)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, 0, 0, isMobile and 35 or 40)
+    container.BackgroundTransparency = 1
+    container.LayoutOrder = layoutOrder
+    container.Parent = parent
+    
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -80, 0, isMobile and 18 or 22)
+    sliderFrame.Position = UDim2.new(0, 0, 0.5, -11)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    sliderFrame.Parent = container
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(1, 0)
+    sliderCorner.Parent = sliderFrame
+    
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(100, 200, 255)
+    fill.BorderSizePixel = 0
+    fill.Parent = sliderFrame
+    
+    local fillCorner = Instance.new("UICorner")
+    fillCorner.CornerRadius = UDim.new(1, 0)
+    fillCorner.Parent = fill
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 70, 1, 0)
+    valueLabel.Position = UDim2.new(1, -70, 0, 0)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(default)
+    valueLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    valueLabel.TextSize = isMobile and 13 or 15
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.Parent = container
+    
+    local dragging = false
+    
+    sliderFrame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            MainFrame.Draggable = false
+        end
+    end)
+    
+    sliderFrame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+            MainFrame.Draggable = true
+        end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouse = LocalPlayer:GetMouse()
+            local relativeX = math.clamp(mouse.X - sliderFrame.AbsolutePosition.X, 0, sliderFrame.AbsoluteSize.X)
+            local percent = relativeX / sliderFrame.AbsoluteSize.X
+            local value = math.floor(min + (percent * (max - min)))
+            
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            valueLabel.Text = tostring(value)
+            callback(value)
+        end
+    end)
+    
+    return container
+end
+
 -- ==================
 -- ABA COMBATE
 -- ==================
 
-local CombatLabel = Instance.new("TextLabel")
-CombatLabel.Size = UDim2.new(1, -20, 0, 30)
-CombatLabel.Position = UDim2.new(0, 10, 0, 10)
-CombatLabel.BackgroundTransparency = 1
-CombatLabel.Text = "⚔️ COMBATE"
-CombatLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-CombatLabel.TextSize = isMobile and 16 or 18
-CombatLabel.Font = Enum.Font.GothamBold
-CombatLabel.TextXAlignment = Enum.TextXAlignment.Left
-CombatLabel.Parent = CombatFrame
+createLabel(CombatFrame, "⚔️ CONFIGURAÇÕES DE COMBATE", 1)
 
-local SizeLabel = Instance.new("TextLabel")
-SizeLabel.Size = UDim2.new(1, -20, 0, 25)
-SizeLabel.Position = UDim2.new(0, 10, 0, 50)
-SizeLabel.BackgroundTransparency = 1
-SizeLabel.Text = "Tamanho da Hitbox: 20"
-SizeLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-SizeLabel.TextSize = isMobile and 12 or 14
-SizeLabel.Font = Enum.Font.Gotham
-SizeLabel.TextXAlignment = Enum.TextXAlignment.Left
-SizeLabel.Parent = CombatFrame
+createSlider(CombatFrame, 1, 100, 25, function(value)
+    _G.HeadSize = value
+end, 2)
 
-local SliderFrame = Instance.new("Frame")
-SliderFrame.Size = UDim2.new(1, -40, 0, 20)
-SliderFrame.Position = UDim2.new(0, 20, 0, 80)
-SliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-SliderFrame.BorderSizePixel = 0
-SliderFrame.Parent = CombatFrame
+local SizeInfo = createLabel(CombatFrame, "Tamanho da Hitbox", 3)
 
-local SliderCorner = Instance.new("UICorner")
-SliderCorner.CornerRadius = UDim.new(0, 10)
-SliderCorner.Parent = SliderFrame
-
-local SliderButton = Instance.new("Frame")
-SliderButton.Size = UDim2.new(0.19, 0, 1, 0)
-SliderButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-SliderButton.BorderSizePixel = 0
-SliderButton.Parent = SliderFrame
-
-local SliderButtonCorner = Instance.new("UICorner")
-SliderButtonCorner.CornerRadius = UDim.new(0, 10)
-SliderButtonCorner.Parent = SliderButton
-
-local dragging = false
-SliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        MainFrame.Draggable = false -- DESABILITA arrasto da GUI
-    end
-end)
-
-SliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
-        MainFrame.Draggable = true -- REABILITA arrasto da GUI
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if dragging then
-        local mouse = LocalPlayer:GetMouse()
-        local relativeX = math.clamp(mouse.X - SliderFrame.AbsolutePosition.X, 0, SliderFrame.AbsoluteSize.X)
-        local percent = relativeX / SliderFrame.AbsoluteSize.X
-        SliderButton.Size = UDim2.new(percent, 0, 1, 0)
-        
-        _G.HeadSize = math.floor(1 + (percent * 99))
-        SizeLabel.Text = "Tamanho da Hitbox: " .. _G.HeadSize
-    end
-end)
-
-local TeamToggle = Instance.new("TextButton")
-TeamToggle.Size = UDim2.new(1, -40, 0, 40)
-TeamToggle.Position = UDim2.new(0, 20, 0, 120)
-TeamToggle.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-TeamToggle.BorderSizePixel = 0
-TeamToggle.Text = "Hitbox Team: OFF (Desativado)"
-TeamToggle.TextColor3 = Color3.fromRGB(120, 120, 120)
-TeamToggle.TextSize = isMobile and 13 or 16
-TeamToggle.Font = Enum.Font.GothamBold
-TeamToggle.Parent = CombatFrame
-
-local TeamToggleCorner = Instance.new("UICorner")
-TeamToggleCorner.CornerRadius = UDim.new(0, 8)
-TeamToggleCorner.Parent = TeamToggle
-
-local HitboxToggle = Instance.new("TextButton")
-HitboxToggle.Size = UDim2.new(1, -40, 0, 50)
-HitboxToggle.Position = UDim2.new(0, 20, 0, 180)
-HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-HitboxToggle.BorderSizePixel = 0
-HitboxToggle.Text = "ATIVAR HITBOX"
-HitboxToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-HitboxToggle.TextSize = isMobile and 15 or 18
-HitboxToggle.Font = Enum.Font.GothamBold
-HitboxToggle.Parent = CombatFrame
-
-local HitboxToggleCorner = Instance.new("UICorner")
-HitboxToggleCorner.CornerRadius = UDim.new(0, 8)
-HitboxToggleCorner.Parent = HitboxToggle
+local TeamToggle = createButton(CombatFrame, "Hitbox Team: OFF", 4)
+local HitboxToggle = createButton(CombatFrame, "ATIVAR HITBOX", 5)
+local HeadshotToggle = createButton(CombatFrame, "HEADSHOT AUTOMÁTICO: OFF", 6)
 
 local function updateTeamButton()
     if not _G.HitboxEnabled then
@@ -432,7 +399,7 @@ local function updateTeamButton()
         else
             TeamToggle.Text = "Hitbox Team: OFF"
             TeamToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-            TeamToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+            TeamToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
         end
     end
 end
@@ -451,236 +418,48 @@ HitboxToggle.MouseButton1Click:Connect(function()
         HitboxToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
         HitboxToggle.Text = "ATIVAR HITBOX"
-        HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-        
-        for _, v in pairs(Players:GetPlayers()) do
-            if v.Name ~= LocalPlayer.Name then
-                pcall(function()
-                    if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = v.Character.HumanoidRootPart
-                        hrp.Size = Vector3.new(2, 2, 1)
-                        hrp.Transparency = 1
-                        hrp.CanCollide = false
-                    end
-                end)
-            end
-        end
+        HitboxToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
     updateTeamButton()
+end)
+
+HeadshotToggle.MouseButton1Click:Connect(function()
+    _G.HeadshotEnabled = not _G.HeadshotEnabled
+    if _G.HeadshotEnabled then
+        HeadshotToggle.Text = "HEADSHOT AUTOMÁTICO: ON"
+        HeadshotToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+    else
+        HeadshotToggle.Text = "HEADSHOT AUTOMÁTICO: OFF"
+        HeadshotToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
 end)
 
 -- ==================
 -- ABA PLAYER
 -- ==================
 
-local NoclipToggle = Instance.new("TextButton")
-NoclipToggle.Size = UDim2.new(1, -40, 0, 50)
-NoclipToggle.Position = UDim2.new(0, 20, 0, 10)
-NoclipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-NoclipToggle.BorderSizePixel = 0
-NoclipToggle.Text = "ATIVAR NOCLIP"
-NoclipToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-NoclipToggle.TextSize = 18
-NoclipToggle.Font = Enum.Font.GothamBold
-NoclipToggle.Parent = PlayerFrame
+createLabel(PlayerFrame, "👤 CONFIGURAÇÕES DO JOGADOR", 1)
 
-local NoclipCorner = Instance.new("UICorner")
-NoclipCorner.CornerRadius = UDim.new(0, 8)
-NoclipCorner.Parent = NoclipToggle
+local NoclipToggle = createButton(PlayerFrame, "ATIVAR NOCLIP", 2)
+local AntiAFKToggle = createButton(PlayerFrame, "ANTI-AFK: ON", 3)
+local GetWeaponButton = createButton(PlayerFrame, "PEGAR ARMA AS VAL", 4)
 
-local SpeedLabel = Instance.new("TextLabel")
-SpeedLabel.Size = UDim2.new(1, -20, 0, 25)
-SpeedLabel.Position = UDim2.new(0, 10, 0, 80)
-SpeedLabel.BackgroundTransparency = 1
-SpeedLabel.Text = "Velocidade: 16 (Desativado)"
-SpeedLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-SpeedLabel.TextSize = 14
-SpeedLabel.Font = Enum.Font.Gotham
-SpeedLabel.TextXAlignment = Enum.TextXAlignment.Left
-SpeedLabel.Parent = PlayerFrame
+createLabel(PlayerFrame, "Velocidade", 5)
+createSlider(PlayerFrame, 16, 100, 16, function(value)
+    _G.SpeedValue = value
+end, 6)
 
-local SpeedSliderFrame = Instance.new("Frame")
-SpeedSliderFrame.Size = UDim2.new(1, -100, 0, 20)
-SpeedSliderFrame.Position = UDim2.new(0, 20, 0, 110)
-SpeedSliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-SpeedSliderFrame.BorderSizePixel = 0
-SpeedSliderFrame.Parent = PlayerFrame
+local SpeedToggle = createButton(PlayerFrame, "SPEED: OFF", 7)
 
-local SpeedSliderCorner = Instance.new("UICorner")
-SpeedSliderCorner.CornerRadius = UDim.new(0, 10)
-SpeedSliderCorner.Parent = SpeedSliderFrame
+createLabel(PlayerFrame, "Força do Pulo", 8)
+createSlider(PlayerFrame, 50, 150, 50, function(value)
+    _G.JumpValue = value
+end, 9)
 
-local SpeedSliderButton = Instance.new("Frame")
-SpeedSliderButton.Size = UDim2.new(0.066, 0, 1, 0)
-SpeedSliderButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-SpeedSliderButton.BorderSizePixel = 0
-SpeedSliderButton.Parent = SpeedSliderFrame
+local JumpToggle = createButton(PlayerFrame, "JUMP: OFF", 10)
 
-local SpeedSliderButtonCorner = Instance.new("UICorner")
-SpeedSliderButtonCorner.CornerRadius = UDim.new(0, 10)
-SpeedSliderButtonCorner.Parent = SpeedSliderButton
-
-local SpeedToggle = Instance.new("TextButton")
-SpeedToggle.Size = UDim2.new(0, 70, 0, 35)
-SpeedToggle.Position = UDim2.new(1, -90, 0, 102)
-SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-SpeedToggle.BorderSizePixel = 0
-SpeedToggle.Text = "OFF"
-SpeedToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-SpeedToggle.TextSize = 14
-SpeedToggle.Font = Enum.Font.GothamBold
-SpeedToggle.Parent = PlayerFrame
-
-local SpeedToggleCorner = Instance.new("UICorner")
-SpeedToggleCorner.CornerRadius = UDim.new(0, 8)
-SpeedToggleCorner.Parent = SpeedToggle
-
-local JumpLabel = Instance.new("TextLabel")
-JumpLabel.Size = UDim2.new(1, -20, 0, 25)
-JumpLabel.Position = UDim2.new(0, 10, 0, 160)
-JumpLabel.BackgroundTransparency = 1
-JumpLabel.Text = "Pulo: 50 (Desativado)"
-JumpLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-JumpLabel.TextSize = 14
-JumpLabel.Font = Enum.Font.Gotham
-JumpLabel.TextXAlignment = Enum.TextXAlignment.Left
-JumpLabel.Parent = PlayerFrame
-
-local JumpSliderFrame = Instance.new("Frame")
-JumpSliderFrame.Size = UDim2.new(1, -100, 0, 20)
-JumpSliderFrame.Position = UDim2.new(0, 20, 0, 190)
-JumpSliderFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-JumpSliderFrame.BorderSizePixel = 0
-JumpSliderFrame.Parent = PlayerFrame
-
-local JumpSliderCorner = Instance.new("UICorner")
-JumpSliderCorner.CornerRadius = UDim.new(0, 10)
-JumpSliderCorner.Parent = JumpSliderFrame
-
-local JumpSliderButton = Instance.new("Frame")
-JumpSliderButton.Size = UDim2.new(0.444, 0, 1, 0)
-JumpSliderButton.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
-JumpSliderButton.BorderSizePixel = 0
-JumpSliderButton.Parent = JumpSliderFrame
-
-local JumpSliderButtonCorner = Instance.new("UICorner")
-JumpSliderButtonCorner.CornerRadius = UDim.new(0, 10)
-JumpSliderButtonCorner.Parent = JumpSliderButton
-
-local JumpToggle = Instance.new("TextButton")
-JumpToggle.Size = UDim2.new(0, 70, 0, 35)
-JumpToggle.Position = UDim2.new(1, -90, 0, 182)
-JumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-JumpToggle.BorderSizePixel = 0
-JumpToggle.Text = "OFF"
-JumpToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-JumpToggle.TextSize = 14
-JumpToggle.Font = Enum.Font.GothamBold
-JumpToggle.Parent = PlayerFrame
-
-local JumpToggleCorner = Instance.new("UICorner")
-JumpToggleCorner.CornerRadius = UDim.new(0, 8)
-JumpToggleCorner.Parent = JumpToggle
-
-local AntiAFKToggle = Instance.new("TextButton")
-AntiAFKToggle.Size = UDim2.new(1, -40, 0, 50)
-AntiAFKToggle.Position = UDim2.new(0, 20, 0, 240)
 AntiAFKToggle.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
-AntiAFKToggle.BorderSizePixel = 0
-AntiAFKToggle.Text = "ANTI-AFK: ON"
-AntiAFKToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
-AntiAFKToggle.TextSize = 18
-AntiAFKToggle.Font = Enum.Font.GothamBold
-AntiAFKToggle.Parent = PlayerFrame
 
-local AntiAFKCorner = Instance.new("UICorner")
-AntiAFKCorner.CornerRadius = UDim.new(0, 8)
-AntiAFKCorner.Parent = AntiAFKToggle
-
--- Botão Pegar Arma AS VAL
-local GetWeaponButton = Instance.new("TextButton")
-GetWeaponButton.Size = UDim2.new(1, -40, 0, 50)
-GetWeaponButton.Position = UDim2.new(0, 20, 0, 300)
-GetWeaponButton.BackgroundColor3 = Color3.fromRGB(80, 60, 100)
-GetWeaponButton.BorderSizePixel = 0
-GetWeaponButton.Text = "PEGAR ARMA AS VAL"
-GetWeaponButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-GetWeaponButton.TextSize = 18
-GetWeaponButton.Font = Enum.Font.GothamBold
-GetWeaponButton.Parent = PlayerFrame
-
-local GetWeaponCorner = Instance.new("UICorner")
-GetWeaponCorner.CornerRadius = UDim.new(0, 8)
-GetWeaponCorner.Parent = GetWeaponButton
-
--- ==================
--- ABA VISUAL
--- ==================
-
-local VisualLabel = Instance.new("TextLabel")
-VisualLabel.Size = UDim2.new(1, -20, 0, 30)
-VisualLabel.Position = UDim2.new(0, 10, 0, 10)
-VisualLabel.BackgroundTransparency = 1
-VisualLabel.Text = "👁️ VISUAL"
-VisualLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-VisualLabel.TextSize = 18
-VisualLabel.Font = Enum.Font.GothamBold
-VisualLabel.TextXAlignment = Enum.TextXAlignment.Left
-VisualLabel.Parent = VisualFrame
-
--- ESP Toggle
-local ESPToggle = Instance.new("TextButton")
-ESPToggle.Size = UDim2.new(1, -40, 0, 50)
-ESPToggle.Position = UDim2.new(0, 20, 0, 50)
-ESPToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ESPToggle.BorderSizePixel = 0
-ESPToggle.Text = "ATIVAR ESP"
-ESPToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPToggle.TextSize = 18
-ESPToggle.Font = Enum.Font.GothamBold
-ESPToggle.Parent = VisualFrame
-
-local ESPToggleCorner = Instance.new("UICorner")
-ESPToggleCorner.CornerRadius = UDim.new(0, 8)
-ESPToggleCorner.Parent = ESPToggle
-
--- ESP Team Toggle
-local ESPTeamToggle = Instance.new("TextButton")
-ESPTeamToggle.Size = UDim2.new(1, -40, 0, 50)
-ESPTeamToggle.Position = UDim2.new(0, 20, 0, 110)
-ESPTeamToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-ESPTeamToggle.BorderSizePixel = 0
-ESPTeamToggle.Text = "ESP NO MEU TIME"
-ESPTeamToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPTeamToggle.TextSize = 18
-ESPTeamToggle.Font = Enum.Font.GothamBold
-ESPTeamToggle.Parent = VisualFrame
-
-local ESPTeamCorner = Instance.new("UICorner")
-ESPTeamCorner.CornerRadius = UDim.new(0, 8)
-ESPTeamCorner.Parent = ESPTeamToggle
-
--- Fullbright Toggle
-local FullbrightToggle = Instance.new("TextButton")
-FullbrightToggle.Size = UDim2.new(1, -40, 0, 50)
-FullbrightToggle.Position = UDim2.new(0, 20, 0, 170)
-FullbrightToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-FullbrightToggle.BorderSizePixel = 0
-FullbrightToggle.Text = "ATIVAR FULLBRIGHT"
-FullbrightToggle.TextColor3 = Color3.fromRGB(255, 255, 255)
-FullbrightToggle.TextSize = 18
-FullbrightToggle.Font = Enum.Font.GothamBold
-FullbrightToggle.Parent = VisualFrame
-
-local FullbrightCorner = Instance.new("UICorner")
-FullbrightCorner.CornerRadius = UDim.new(0, 8)
-FullbrightCorner.Parent = FullbrightToggle
-
--- ==================
--- FUNÇÕES
--- ==================
-
--- Noclip
 NoclipToggle.MouseButton1Click:Connect(function()
     _G.NoclipEnabled = not _G.NoclipEnabled
     if _G.NoclipEnabled then
@@ -688,129 +467,44 @@ NoclipToggle.MouseButton1Click:Connect(function()
         NoclipToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
         NoclipToggle.Text = "ATIVAR NOCLIP"
-        NoclipToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    end
-end)
-
--- Speed Slider
-local draggingSpeed = false
-SpeedSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingSpeed = true
-        MainFrame.Draggable = false
-    end
-end)
-
-SpeedSliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingSpeed = false
-        MainFrame.Draggable = true
-    end
-end)
-
-local function updateSpeedLabel()
-    if _G.SpeedEnabled then
-        SpeedLabel.Text = "Velocidade: " .. _G.SpeedValue
-        SpeedLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    else
-        SpeedLabel.Text = "Velocidade: " .. _G.SpeedValue .. " (Desativado)"
-        SpeedLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if draggingSpeed then
-        local mouse = LocalPlayer:GetMouse()
-        local relativeX = math.clamp(mouse.X - SpeedSliderFrame.AbsolutePosition.X, 0, SpeedSliderFrame.AbsoluteSize.X)
-        local percent = relativeX / SpeedSliderFrame.AbsoluteSize.X
-        SpeedSliderButton.Size = UDim2.new(percent, 0, 1, 0)
-        
-        _G.SpeedValue = math.floor(10 + (percent * 90))
-        updateSpeedLabel()
+        NoclipToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
 SpeedToggle.MouseButton1Click:Connect(function()
     _G.SpeedEnabled = not _G.SpeedEnabled
     if _G.SpeedEnabled then
-        SpeedToggle.Text = "ON"
-        SpeedToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
-        SpeedToggle.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
+        SpeedToggle.Text = "SPEED: ON"
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
-        SpeedToggle.Text = "OFF"
-        SpeedToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-        SpeedToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    end
-    updateSpeedLabel()
-end)
-
--- Jump Slider
-local draggingJump = false
-JumpSliderFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingJump = true
-        MainFrame.Draggable = false
-    end
-end)
-
-JumpSliderFrame.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        draggingJump = false
-        MainFrame.Draggable = true
-    end
-end)
-
-local function updateJumpLabel()
-    if _G.JumpEnabled then
-        JumpLabel.Text = "Pulo: " .. _G.JumpValue
-        JumpLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-    else
-        JumpLabel.Text = "Pulo: " .. _G.JumpValue .. " (Desativado)"
-        JumpLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    if draggingJump then
-        local mouse = LocalPlayer:GetMouse()
-        local relativeX = math.clamp(mouse.X - JumpSliderFrame.AbsolutePosition.X, 0, JumpSliderFrame.AbsoluteSize.X)
-        local percent = relativeX / JumpSliderFrame.AbsoluteSize.X
-        JumpSliderButton.Size = UDim2.new(percent, 0, 1, 0)
-        
-        _G.JumpValue = math.floor(10 + (percent * 90))
-        updateJumpLabel()
+        SpeedToggle.Text = "SPEED: OFF"
+        SpeedToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
 JumpToggle.MouseButton1Click:Connect(function()
     _G.JumpEnabled = not _G.JumpEnabled
     if _G.JumpEnabled then
-        JumpToggle.Text = "ON"
-        JumpToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
-        JumpToggle.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
+        JumpToggle.Text = "JUMP: ON"
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
-        JumpToggle.Text = "OFF"
-        JumpToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-        JumpToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        JumpToggle.Text = "JUMP: OFF"
+        JumpToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
-    updateJumpLabel()
 end)
 
--- Anti-AFK
 AntiAFKToggle.MouseButton1Click:Connect(function()
     _G.AntiAFKEnabled = not _G.AntiAFKEnabled
     if _G.AntiAFKEnabled then
         AntiAFKToggle.Text = "ANTI-AFK: ON"
-        AntiAFKToggle.TextColor3 = Color3.fromRGB(100, 255, 100)
         AntiAFKToggle.BackgroundColor3 = Color3.fromRGB(40, 80, 40)
     else
         AntiAFKToggle.Text = "ANTI-AFK: OFF"
-        AntiAFKToggle.TextColor3 = Color3.fromRGB(255, 100, 100)
-        AntiAFKToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        AntiAFKToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- Função Pegar Arma AS VAL
+-- Função Pegar Arma
 local function getASVAL()
     local pos1 = Vector3.new(119.21, 13.00, 194.23)
     local pos2 = Vector3.new(228.34, 21.51, 9.05)
@@ -819,7 +513,6 @@ local function getASVAL()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
             LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(position)
             wait(0.3)
-            -- Simular pressionar E
             local vim = game:GetService("VirtualInputManager")
             vim:SendKeyEvent(true, Enum.KeyCode.E, false, game)
             wait(0.1)
@@ -831,21 +524,16 @@ local function getASVAL()
     local function resetCharacter()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid.Health = 0
-            wait(5) -- Aguardar respawn
+            wait(5)
         end
     end
     
-    -- Ciclo 1: Teleporta pos1 → E → Teleporta pos2 → E → Reseta
     teleportAndInteract(pos1)
     teleportAndInteract(pos2)
     resetCharacter()
-    
-    -- Ciclo 2: Teleporta pos1 → E → Teleporta pos2 → E → Reseta
     teleportAndInteract(pos1)
     teleportAndInteract(pos2)
     resetCharacter()
-    
-    -- Ciclo 3: Teleporta pos1 → E → Teleporta pos2 → E (SEM RESET)
     teleportAndInteract(pos1)
     teleportAndInteract(pos2)
     
@@ -853,21 +541,26 @@ local function getASVAL()
     GetWeaponButton.BackgroundColor3 = Color3.fromRGB(40, 100, 40)
     wait(2)
     GetWeaponButton.Text = "PEGAR ARMA AS VAL"
-    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(80, 60, 100)
+    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 end
 
 GetWeaponButton.MouseButton1Click:Connect(function()
     GetWeaponButton.Text = "⏳ COLETANDO..."
-    GetWeaponButton.BackgroundColor3 = Color3.fromRGB(100, 100, 40)
-    
     spawn(function()
-        pcall(function()
-            getASVAL()
-        end)
+        pcall(getASVAL)
     end)
 end)
 
--- ESP Toggle
+-- ==================
+-- ABA VISUAL
+-- ==================
+
+createLabel(VisualFrame, "👁️ CONFIGURAÇÕES VISUAIS", 1)
+
+local ESPToggle = createButton(VisualFrame, "ATIVAR ESP", 2)
+local ESPTeamToggle = createButton(VisualFrame, "ESP NO MEU TIME", 3)
+local FullbrightToggle = createButton(VisualFrame, "ATIVAR FULLBRIGHT", 4)
+
 ESPToggle.MouseButton1Click:Connect(function()
     _G.ESPEnabled = not _G.ESPEnabled
     if _G.ESPEnabled then
@@ -875,11 +568,10 @@ ESPToggle.MouseButton1Click:Connect(function()
         ESPToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
         ESPToggle.Text = "ATIVAR ESP"
-        ESPToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        ESPToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- ESP Team Toggle
 ESPTeamToggle.MouseButton1Click:Connect(function()
     _G.TeamESPEnabled = not _G.TeamESPEnabled
     if _G.TeamESPEnabled then
@@ -887,11 +579,10 @@ ESPTeamToggle.MouseButton1Click:Connect(function()
         ESPTeamToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
     else
         ESPTeamToggle.Text = "ESP NO MEU TIME"
-        ESPTeamToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        ESPTeamToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- Fullbright Toggle
 FullbrightToggle.MouseButton1Click:Connect(function()
     _G.FullbrightEnabled = not _G.FullbrightEnabled
     if _G.FullbrightEnabled then
@@ -919,67 +610,52 @@ FullbrightToggle.MouseButton1Click:Connect(function()
         Lighting.GlobalShadows = originalLightingSettings.GlobalShadows
         
         FullbrightToggle.Text = "ATIVAR FULLBRIGHT"
-        FullbrightToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+        FullbrightToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     end
 end)
 
--- Minimizar/Maximizar
-MinimizeButton.MouseButton1Click:Connect(function()
-    MainFrame.Visible = false
-    MinimizedBall.Visible = true
+-- ==================
+-- ABA VOLVER
+-- ==================
+
+createLabel(VolverFrame, "🎖️ AUTO VOLVER", 1)
+
+local CommanderLabel = createLabel(VolverFrame, "👤 Comandante: Nenhum", 2)
+CommanderLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+
+createLabel(VolverFrame, "📋 Selecione um Comandante:", 3)
+
+local PlayerListFrame = Instance.new("ScrollingFrame")
+PlayerListFrame.Size = UDim2.new(1, 0, 0, isMobile and 200 or 250)
+PlayerListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+PlayerListFrame.BorderSizePixel = 0
+PlayerListFrame.ScrollBarThickness = 6
+PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+PlayerListFrame.LayoutOrder = 4
+PlayerListFrame.Parent = VolverFrame
+
+local ListCorner = Instance.new("UICorner")
+ListCorner.CornerRadius = UDim.new(0, 8)
+ListCorner.Parent = PlayerListFrame
+
+local ListLayout = Instance.new("UIListLayout")
+ListLayout.Padding = UDim.new(0, 4)
+ListLayout.SortOrder = Enum.SortOrder.Name
+ListLayout.Parent = PlayerListFrame
+
+ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 8)
 end)
 
-MinimizedBall.MouseButton1Click:Connect(function()
-    MainFrame.Visible = true
-    MinimizedBall.Visible = false
-end)
+local StatusLabel = createLabel(VolverFrame, "⚠️ Selecione um comandante", 5)
+StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+StatusLabel.TextWrapped = true
 
--- Fechar
-CloseButton.MouseButton1Click:Connect(function()
-    _G.HitboxEnabled = false
-    for _, v in pairs(Players:GetPlayers()) do
-        if v.Name ~= LocalPlayer.Name then
-            pcall(function()
-                if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                    local hrp = v.Character.HumanoidRootPart
-                    hrp.Size = Vector3.new(2, 2, 1)
-                    hrp.Transparency = 1
-                    hrp.CanCollide = false
-                end
-            end)
-        end
-    end
-    ScreenGui:Destroy()
-end)
+-- ==================
+-- SISTEMAS
+-- ==================
 
--- Atalho P para Hitbox
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.P then
-        _G.HitboxEnabled = not _G.HitboxEnabled
-        if _G.HitboxEnabled then
-            HitboxToggle.Text = "DESATIVAR HITBOX"
-            HitboxToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
-        else
-            HitboxToggle.Text = "ATIVAR HITBOX"
-            HitboxToggle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            for _, v in pairs(Players:GetPlayers()) do
-                if v.Name ~= LocalPlayer.Name then
-                    pcall(function()
-                        if v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                            local hrp = v.Character.HumanoidRootPart
-                            hrp.Size = Vector3.new(2, 2, 1)
-                            hrp.Transparency = 1
-                            hrp.CanCollide = false
-                        end
-                    end)
-                end
-            end
-        end
-        updateTeamButton()
-    end
-end)
-
--- Sistema Anti-AFK
+-- Anti-AFK
 LocalPlayer.Idled:Connect(function()
     if _G.AntiAFKEnabled then
         VirtualUser:CaptureController()
@@ -987,7 +663,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Sistema Noclip
+-- Noclip
 RunService.Stepped:Connect(function()
     if _G.NoclipEnabled then
         pcall(function()
@@ -1002,7 +678,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- Sistema Speed e Jump
+-- Speed e Jump
 RunService.RenderStepped:Connect(function()
     pcall(function()
         if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
@@ -1021,7 +697,7 @@ RunService.RenderStepped:Connect(function()
     end)
 end)
 
--- Sistema Hitbox
+-- Hitbox Melhorada
 RunService.RenderStepped:Connect(function()
     if _G.HitboxEnabled then
         for _, v in pairs(Players:GetPlayers()) do
@@ -1035,17 +711,35 @@ RunService.RenderStepped:Connect(function()
                             shouldApply = true
                         end
                     end
-                    if shouldApply and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
-                        local hrp = v.Character.HumanoidRootPart
-                        hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
-                        hrp.Transparency = 0.7
-                        if v.Team then
-                            hrp.BrickColor = v.Team.TeamColor
-                        else
-                            hrp.BrickColor = BrickColor.new("Really blue")
+                    
+                    if shouldApply and v.Character then
+                        -- Hitbox na Head para headshot
+                        if _G.HeadshotEnabled and v.Character:FindFirstChild("Head") then
+                            local head = v.Character.Head
+                            head.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                            head.Transparency = 0.7
+                            head.Material = Enum.Material.Neon
+                            head.CanCollide = false
+                            if v.Team then
+                                head.BrickColor = v.Team.TeamColor
+                            else
+                                head.BrickColor = BrickColor.new("Really red")
+                            end
                         end
-                        hrp.Material = Enum.Material.Neon
-                        hrp.CanCollide = false
+                        
+                        -- Hitbox no HumanoidRootPart
+                        if v.Character:FindFirstChild("HumanoidRootPart") then
+                            local hrp = v.Character.HumanoidRootPart
+                            hrp.Size = Vector3.new(_G.HeadSize, _G.HeadSize, _G.HeadSize)
+                            hrp.Transparency = 0.7
+                            hrp.Material = Enum.Material.Neon
+                            hrp.CanCollide = false
+                            if v.Team then
+                                hrp.BrickColor = v.Team.TeamColor
+                            else
+                                hrp.BrickColor = BrickColor.new("Really blue")
+                            end
+                        end
                     end
                 end)
             end
@@ -1053,7 +747,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Sistema ESP
+-- ESP
 local function createESP(player)
     if player == LocalPlayer then return end
     
@@ -1122,8 +816,6 @@ Players.PlayerRemoving:Connect(removeESP)
 -- ==================
 
 local isRotating = false
-local lastCommandTime = 0
-local commandCooldown = 1
 
 local function updateStatus(text, color)
     StatusLabel.Text = text
@@ -1133,11 +825,11 @@ end
 local function createPlayerButton(player)
     local Button = Instance.new("TextButton")
     Button.Name = player.Name
-    Button.Size = UDim2.new(1, -10, 0, 32)
-    Button.BackgroundColor3 = Color3.fromRGB(30, 45, 30)
-    Button.Text = "  " .. player.Name
+    Button.Size = UDim2.new(1, -10, 0, isMobile and 38 or 35)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    Button.Text = "  " .. player.Name .. (player == LocalPlayer and " (VOCÊ)" or "")
     Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Button.TextSize = 12
+    Button.TextSize = isMobile and 13 or 12
     Button.Font = Enum.Font.Gotham
     Button.TextXAlignment = Enum.TextXAlignment.Left
     Button.Parent = PlayerListFrame
@@ -1162,13 +854,13 @@ local function createPlayerButton(player)
     Button.MouseButton1Click:Connect(function()
         for _, btn in pairs(PlayerListFrame:GetChildren()) do
             if btn:IsA("TextButton") then
-                btn.BackgroundColor3 = Color3.fromRGB(30, 45, 30)
+                btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
                 local ind = btn:FindFirstChild("Indicator")
                 if ind then ind.Visible = false end
             end
         end
         
-        Button.BackgroundColor3 = Color3.fromRGB(40, 70, 40)
+        Button.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
         Indicator.Visible = true
         
         _G.SelectedCommander = player
@@ -1188,42 +880,49 @@ local function updatePlayerList()
     end
     
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            createPlayerButton(player)
-        end
+        createPlayerButton(player)
     end
 end
 
 local function rotateCharacter(degrees)
-    local currentTime = tick()
-    if currentTime - lastCommandTime < commandCooldown then
-        return false
-    end
-    
-    if isRotating then
-        return false
-    end
-    
+    if isRotating then return false end
     if not LocalPlayer.Character then return false end
+    
     local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not HumanoidRootPart then return false end
     
+    local Humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
+    if Humanoid then
+        Humanoid.AutoRotate = false
+    end
+    
     isRotating = true
-    lastCommandTime = currentTime
     
     local currentCFrame = HumanoidRootPart.CFrame
-    local currentPosition = currentCFrame.Position
-    local targetCFrame = currentCFrame * CFrame.Angles(0, math.rad(degrees), 0)
-    targetCFrame = CFrame.new(currentPosition.X, currentPosition.Y, currentPosition.Z) * (targetCFrame - targetCFrame.Position)
+    local overshoot = math.random(5, 10)
+    local firstRotation = degrees + (degrees > 0 and overshoot or -overshoot)
     
-    local tweenInfo = TweenInfo.new(_G.RotationSpeed, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local tween = TweenService:Create(HumanoidRootPart, tweenInfo, {CFrame = targetCFrame})
+    local firstCFrame = currentCFrame * CFrame.Angles(0, math.rad(firstRotation), 0)
     
-    tween.Completed:Connect(function()
-        isRotating = false
-    end)
+    local tween1 = TweenService:Create(HumanoidRootPart, 
+        TweenInfo.new(0.4, Enum.EasingStyle.Linear), 
+        {CFrame = firstCFrame})
+    tween1:Play()
+    tween1.Completed:Wait()
     
-    tween:Play()
+    local finalCFrame = currentCFrame * CFrame.Angles(0, math.rad(degrees), 0)
+    
+    local tween2 = TweenService:Create(HumanoidRootPart, 
+        TweenInfo.new(0.2, Enum.EasingStyle.Linear), 
+        {CFrame = finalCFrame})
+    tween2:Play()
+    tween2.Completed:Wait()
+    
+    if Humanoid then
+        Humanoid.AutoRotate = true
+    end
+    
+    isRotating = false
     return true
 end
 
@@ -1237,17 +936,19 @@ local function processCommand(message, speaker)
     local angle = VolverCommands[message]
     
     if angle then
-        updateStatus("⏳ Comando recebido! Executando em 1 segundo...", Color3.fromRGB(255, 255, 100))
-        wait(_G.CommandDelay)
+        updateStatus("⏳ Comando recebido! Executando...", Color3.fromRGB(255, 255, 100))
         
-        local success = rotateCharacter(angle)
-        if success then
-            updateStatus(string.format("🔄 Executando: %s (%d°)", message, math.abs(angle)), Color3.fromRGB(255, 255, 100))
-            wait(_G.RotationSpeed + 0.5)
-            if _G.SelectedCommander then
-                updateStatus("✅ Aguardando comandos de " .. _G.SelectedCommander.Name, Color3.fromRGB(100, 255, 100))
+        task.spawn(function()
+            task.wait(1.8)
+            local success = rotateCharacter(angle)
+            if success then
+                updateStatus(string.format("🔄 Executado: %d°", math.abs(angle)), Color3.fromRGB(255, 255, 100))
+                task.wait(1)
+                if _G.SelectedCommander then
+                    updateStatus("✅ Aguardando comandos de " .. _G.SelectedCommander.Name, Color3.fromRGB(100, 255, 100))
+                end
             end
-        end
+        end)
     end
 end
 
@@ -1272,7 +973,7 @@ end
 
 Players.PlayerAdded:Connect(function(player)
     connectPlayerChat(player)
-    wait(0.5)
+    task.wait(0.5)
     updatePlayerList()
 end)
 
@@ -1281,12 +982,46 @@ Players.PlayerRemoving:Connect(function(player)
         _G.SelectedCommander = nil
         CommanderLabel.Text = "👤 Comandante: Nenhum"
         CommanderLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-        updateStatus("⚠️ Comandante saiu.\nSelecione outro.", Color3.fromRGB(255, 200, 100))
+        updateStatus("⚠️ Comandante saiu. Selecione outro.", Color3.fromRGB(255, 200, 100))
     end
-    wait(0.5)
+    task.wait(0.5)
     updatePlayerList()
 end)
 
 updatePlayerList()
 
-print("Combat GUI Completo carregado!")
+-- ==================
+-- BOTÕES GUI
+-- ==================
+
+MinimizeButton.MouseButton1Click:Connect(function()
+    MainFrame.Visible = false
+    MinimizedBall.Visible = true
+end)
+
+MinimizedBall.MouseButton1Click:Connect(function()
+    MainFrame.Visible = true
+    MinimizedBall.Visible = false
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+    _G.HitboxEnabled = false
+    ScreenGui:Destroy()
+end)
+
+-- Atalho P para Hitbox
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.P then
+        _G.HitboxEnabled = not _G.HitboxEnabled
+        if _G.HitboxEnabled then
+            HitboxToggle.Text = "DESATIVAR HITBOX"
+            HitboxToggle.BackgroundColor3 = Color3.fromRGB(80, 180, 80)
+        else
+            HitboxToggle.Text = "ATIVAR HITBOX"
+            HitboxToggle.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+        end
+        updateTeamButton()
+    end
+end)
+
+print("✅ Combat GUI Completo carregado! Mobile: " .. tostring(isMobile))
