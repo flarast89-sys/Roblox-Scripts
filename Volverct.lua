@@ -1,6 +1,7 @@
 -- Sistema de Comandos Volver - VERSÃO FINAL COMPLETA
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local TextChatService = game:GetService("TextChatService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -12,6 +13,7 @@ local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 local sistemaAtivo = false
 local ultimoTexto = ""
 local girando = false
+local ultimoComandoChat = "" -- Para chat
 
 print("========================================")
 print("SISTEMA VOLVER INICIANDO...")
@@ -172,6 +174,59 @@ local function girarPersonagem(graus)
     girando = false
 end
 
+-- Função para verificar distância
+local function jogadorEstaPerto(outroPlayer)
+    if not outroPlayer.Character then return false end
+    local outroRoot = outroPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not outroRoot then return false end
+    
+    local distancia = (humanoidRootPart.Position - outroRoot.Position).Magnitude
+    return distancia <= 20
+end
+
+-- Função para processar comando
+local function processarComando(comando, origem)
+    local executou = false
+    
+    if comando == "Direita, volver." then
+        cmdDisplay.Text = "✓ Direita (" .. origem .. ")"
+        cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
+        print("✓ EXECUTANDO: Direita, volver. [" .. origem .. "]")
+        spawn(function() girarPersonagem(90) end)
+        executou = true
+        
+    elseif comando == "Esquerda, volver." then
+        cmdDisplay.Text = "✓ Esquerda (" .. origem .. ")"
+        cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
+        print("✓ EXECUTANDO: Esquerda, volver. [" .. origem .. "]")
+        spawn(function() girarPersonagem(-90) end)
+        executou = true
+        
+    elseif comando == "Direita, inclinar." then
+        cmdDisplay.Text = "✓ Inclinar Direita (" .. origem .. ")"
+        cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
+        print("✓ EXECUTANDO: Direita, inclinar. [" .. origem .. "]")
+        spawn(function() girarPersonagem(45) end)
+        executou = true
+        
+    elseif comando == "Esquerda, inclinar." then
+        cmdDisplay.Text = "✓ Inclinar Esquerda (" .. origem .. ")"
+        cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
+        print("✓ EXECUTANDO: Esquerda, inclinar. [" .. origem .. "]")
+        spawn(function() girarPersonagem(-45) end)
+        executou = true
+        
+    elseif comando == "Retaguarda, volver." then
+        cmdDisplay.Text = "✓ Retaguarda (" .. origem .. ")"
+        cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
+        print("✓ EXECUTANDO: Retaguarda, volver. [" .. origem .. "]")
+        spawn(function() girarPersonagem(180) end)
+        executou = true
+    end
+    
+    return executou
+end
+
 -- Função principal de verificação
 local function verificarComandos()
     while sistemaAtivo do
@@ -204,43 +259,7 @@ local function verificarComandos()
                             end
                             
                             -- Executar comandos
-                            local executou = false
-                            
-                            if comando == "Direita, volver." then
-                                cmdDisplay.Text = "✓ Direita"
-                                cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                print("✓ EXECUTANDO: Direita, volver.")
-                                spawn(function() girarPersonagem(90) end)
-                                executou = true
-                                
-                            elseif comando == "Esquerda, volver." then
-                                cmdDisplay.Text = "✓ Esquerda"
-                                cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                print("✓ EXECUTANDO: Esquerda, volver.")
-                                spawn(function() girarPersonagem(-90) end)
-                                executou = true
-                                
-                            elseif comando == "Direita, inclinar." then
-                                cmdDisplay.Text = "✓ Inclinar Direita"
-                                cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                print("✓ EXECUTANDO: Direita, inclinar.")
-                                spawn(function() girarPersonagem(45) end)
-                                executou = true
-                                
-                            elseif comando == "Esquerda, inclinar." then
-                                cmdDisplay.Text = "✓ Inclinar Esquerda"
-                                cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                print("✓ EXECUTANDO: Esquerda, inclinar.")
-                                spawn(function() girarPersonagem(-45) end)
-                                executou = true
-                                
-                            elseif comando == "Retaguarda, volver." then
-                                cmdDisplay.Text = "✓ Retaguarda"
-                                cmdDisplay.TextColor3 = Color3.fromRGB(0, 255, 0)
-                                print("✓ EXECUTANDO: Retaguarda, volver.")
-                                spawn(function() girarPersonagem(180) end)
-                                executou = true
-                            end
+                            local executou = processarComando(comando, "Topo")
                             
                             -- Se executou, AGUARDAR o texto SUMIR da tela
                             if executou then
@@ -277,6 +296,92 @@ local function verificarComandos()
         wait(0.1)
     end
 end
+
+-- Função para detectar comandos no CHAT de jogadores próximos
+local function detectarChatProximo()
+    -- Tentar sistema de chat novo
+    local sucesso = pcall(function()
+        if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+            local channels = TextChatService:WaitForChild("TextChannels")
+            local generalChannel = channels:WaitForChild("RBXGeneral")
+            
+            generalChannel.MessageReceived:Connect(function(message)
+                if not sistemaAtivo or girando then return end
+                
+                local remetenteNome = tostring(message.TextSource)
+                local texto = message.Text
+                
+                -- Encontrar o jogador que enviou
+                for _, outroPlayer in pairs(Players:GetPlayers()) do
+                    if outroPlayer.Name == remetenteNome or outroPlayer.DisplayName == remetenteNome then
+                        -- Verificar se está perto
+                        if jogadorEstaPerto(outroPlayer) then
+                            -- Verificar se é diferente do último
+                            if texto ~= ultimoComandoChat then
+                                ultimoComandoChat = texto
+                                
+                                -- Processar comando
+                                local executou = processarComando(texto, "Chat: " .. outroPlayer.Name)
+                                
+                                if executou then
+                                    wait(2) -- Espera 2 segundos antes de aceitar novo comando do chat
+                                    ultimoComandoChat = ""
+                                end
+                            end
+                        end
+                        break
+                    end
+                end
+            end)
+        end
+    end)
+    
+    -- Se falhou, tentar sistema de chat antigo
+    if not sucesso then
+        local sucesso2 = pcall(function()
+            local ReplicatedStorage = game:GetService("ReplicatedStorage")
+            local DefaultChatSystemChatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
+            
+            if DefaultChatSystemChatEvents then
+                local OnMessageDoneFiltering = DefaultChatSystemChatEvents:WaitForChild("OnMessageDoneFiltering")
+                
+                OnMessageDoneFiltering.OnClientEvent:Connect(function(messageData)
+                    if not sistemaAtivo or girando then return end
+                    
+                    local remetenteNome = messageData.FromSpeaker
+                    local texto = messageData.Message
+                    
+                    -- Encontrar o jogador
+                    for _, outroPlayer in pairs(Players:GetPlayers()) do
+                        if outroPlayer.Name == remetenteNome then
+                            -- Verificar distância
+                            if jogadorEstaPerto(outroPlayer) then
+                                if texto ~= ultimoComandoChat then
+                                    ultimoComandoChat = texto
+                                    
+                                    local executou = processarComando(texto, "Chat: " .. outroPlayer.Name)
+                                    
+                                    if executou then
+                                        wait(2)
+                                        ultimoComandoChat = ""
+                                    end
+                                end
+                            end
+                            break
+                        end
+                    end
+                end)
+            end
+        end)
+        
+        if not sucesso2 then
+            print("⚠️ Detecção de chat não disponível neste jogo")
+        end
+    end
+end
+
+-- Iniciar detecção de chat
+spawn(detectarChatProximo)
 
 -- Botão Toggle
 btnToggle.MouseButton1Click:Connect(function()
