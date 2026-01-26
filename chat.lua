@@ -116,6 +116,22 @@ local function createGUI()
     dotCorner.CornerRadius = UDim.new(1, 0)
     dotCorner.Parent = statusDot
     
+    -- Botão minimizar
+    local minimizeButton = Instance.new("TextButton")
+    minimizeButton.Name = "MinimizeButton"
+    minimizeButton.Size = UDim2.new(0, 35, 0, 35)
+    minimizeButton.Position = UDim2.new(1, -84, 0, 7.5)
+    minimizeButton.BackgroundColor3 = Color3.fromRGB(255, 180, 60)
+    minimizeButton.Text = "─"
+    minimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    minimizeButton.TextSize = 18
+    minimizeButton.Font = Enum.Font.GothamBold
+    minimizeButton.Parent = titleBar
+    
+    local minimizeCorner = Instance.new("UICorner")
+    minimizeCorner.CornerRadius = UDim.new(1, 0)
+    minimizeCorner.Parent = minimizeButton
+    
     -- Botão fechar
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
@@ -286,10 +302,10 @@ local function createGUI()
         msgText.TextYAlignment = Enum.TextYAlignment.Top
         msgText.Parent = msgFrame
         
-        -- Botão deletar
+        -- Botão deletar (lixeira)
         local deleteBtn = Instance.new("TextButton")
-        deleteBtn.Size = UDim2.new(0, 60, 0, 28)
-        deleteBtn.Position = UDim2.new(1, -196, 0, 6)
+        deleteBtn.Size = UDim2.new(0, 45, 0, 28)
+        deleteBtn.Position = UDim2.new(1, -193, 0, 36)
         deleteBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
         deleteBtn.Text = "🗑️"
         deleteBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -333,7 +349,7 @@ local function createGUI()
         -- Botão copiar
         local copyBtn = Instance.new("TextButton")
         copyBtn.Size = UDim2.new(0, 60, 0, 28)
-        copyBtn.Position = UDim2.new(1, -128, 0, 6)
+        copyBtn.Position = UDim2.new(1, -128, 0, 36)
         copyBtn.BackgroundColor3 = Color3.fromRGB(80, 180, 100)
         copyBtn.Text = "📋"
         copyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -352,7 +368,7 @@ local function createGUI()
         -- Botão enviar
         local sendBtn = Instance.new("TextButton")
         sendBtn.Size = UDim2.new(0, 60, 0, 28)
-        sendBtn.Position = UDim2.new(1, -62, 0, 6)
+        sendBtn.Position = UDim2.new(1, -62, 0, 36)
         sendBtn.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
         sendBtn.Text = "📤"
         sendBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -492,6 +508,29 @@ local function createGUI()
     
     -- Eventos dos botões
     selectButton.MouseButton1Click:Connect(showPlayerList)
+    
+    -- Variável para controlar estado minimizado
+    local isMinimized = false
+    
+    minimizeButton.MouseButton1Click:Connect(function()
+        isMinimized = not isMinimized
+        
+        if isMinimized then
+            -- Minimizar
+            game:GetService("TweenService"):Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                Size = UDim2.new(0, 380, 0, 50)
+            }):Play()
+            contentFrame.Visible = false
+            minimizeButton.Text = "□"
+        else
+            -- Restaurar
+            game:GetService("TweenService"):Create(mainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+                Size = UDim2.new(0, 380, 0, 520)
+            }):Play()
+            contentFrame.Visible = true
+            minimizeButton.Text = "─"
+        end
+    end)
     
     toggleButton.MouseButton1Click:Connect(function()
         if not targetPlayer then
