@@ -8,9 +8,8 @@ local playerGui = player:WaitForChild("PlayerGui")
 
 -- Variável de controle
 local sistemaAtivo = false
-local ultimoComando = ""
+local ultimoTextoDetectado = "" -- Guarda o texto completo detectado
 local executandoComando = false
-local comandosExecutados = {} -- Tabela para registrar comandos já executados
 
 -- Criar ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -197,11 +196,18 @@ local function verificarComandos()
                 local estaCentralizado = math.abs(centroDaGui - centroDaTela) < 500
                 
                 if estaMuitoNoTopo and estaCentralizado and not executandoComando then
+                    -- Verificar se é o mesmo texto da última vez
+                    if texto == ultimoTextoDetectado then
+                        -- Mesmo texto, ignorar para não executar de novo
+                        return
+                    end
+                    
+                    -- Texto novo, atualizar
+                    ultimoTextoDetectado = texto
+                    
                     -- Debug: mostrar TUDO que está detectando
                     print("========================================")
-                    print("TEXTO DETECTADO NO TOPO:", texto)
-                    print("Posição Y:", posicao.Y)
-                    print("Posição X:", posicao.X)
+                    print("NOVO TEXTO DETECTADO:", texto)
                     print("========================================")
                     
                     -- Extrair o comando após os dois pontos
@@ -214,54 +220,34 @@ local function verificarComandos()
                         end
                     else
                         comando = texto:match("^%s*(.-)%s*$") or texto
-                        print("TEXTO SEM DOIS PONTOS:", comando)
-                    end
-                    
-                    -- Criar ID único para o comando (texto + timestamp arredondado)
-                    local comandoID = comando .. "_" .. math.floor(tick() / 2)
-                    
-                    -- Verificar se já executou este comando recentemente
-                    if comandosExecutados[comandoID] then
-                        -- Já executou, ignorar
-                        return
                     end
                     
                     -- Verificar comandos EXATOS
                     -- Verificar comandos EXATOS
                     if comando == "Direita, volver." then
-                        comandosExecutados[comandoID] = true
-                        ultimoComando = comando
                         detectionText.Text = "✓"
                         detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        print("✓ Detectado: Direita, volver. - Aguardando 1s...")
+                        print("✓ EXECUTANDO: Direita, volver.")
                         spawn(function() girarPersonagem(90) end)
                     elseif comando == "Esquerda, volver." then
-                        comandosExecutados[comandoID] = true
-                        ultimoComando = comando
                         detectionText.Text = "✓"
                         detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        print("✓ Detectado: Esquerda, volver. - Aguardando 1s...")
+                        print("✓ EXECUTANDO: Esquerda, volver.")
                         spawn(function() girarPersonagem(-90) end)
                     elseif comando == "Direita, inclinar." then
-                        comandosExecutados[comandoID] = true
-                        ultimoComando = comando
                         detectionText.Text = "✓"
                         detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        print("✓ Detectado: Direita, inclinar. - Aguardando 1s...")
+                        print("✓ EXECUTANDO: Direita, inclinar.")
                         spawn(function() girarPersonagem(45) end)
                     elseif comando == "Esquerda, inclinar." then
-                        comandosExecutados[comandoID] = true
-                        ultimoComando = comando
                         detectionText.Text = "✓"
                         detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        print("✓ Detectado: Esquerda, inclinar. - Aguardando 1s...")
+                        print("✓ EXECUTANDO: Esquerda, inclinar.")
                         spawn(function() girarPersonagem(-45) end)
                     elseif comando == "Retaguarda, volver." then
-                        comandosExecutados[comandoID] = true
-                        ultimoComando = comando
                         detectionText.Text = "✓"
                         detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        print("✓ Detectado: Retaguarda, volver. - Aguardando 1s...")
+                        print("✓ EXECUTANDO: Retaguarda, volver.")
                         spawn(function() girarPersonagem(180) end)
                     else
                         -- Comando inválido - mostrar só o erro
@@ -299,8 +285,8 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
         toggleButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
         
-        -- Limpar comandos executados ao ativar
-        comandosExecutados = {}
+        -- Limpar texto detectado ao ativar
+        ultimoTextoDetectado = ""
         
         spawn(verificarComandos)
         print("========================================")
@@ -313,10 +299,9 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.Text = "ATIVAR SISTEMA"
         toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         toggleButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
-        ultimoComando = ""
         
-        -- Limpar comandos executados ao desativar
-        comandosExecutados = {}
+        -- Limpar texto detectado ao desativar
+        ultimoTextoDetectado = ""
         
         print("========================================")
         print("SISTEMA VOLVER DESATIVADO!")
