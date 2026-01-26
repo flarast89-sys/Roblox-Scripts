@@ -10,6 +10,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local sistemaAtivo = false
 local ultimoComando = ""
 local executandoComando = false
+local comandosExecutados = {} -- Tabela para registrar comandos já executados
 
 -- Criar ScreenGui
 local screenGui = Instance.new("ScreenGui")
@@ -173,9 +174,7 @@ local function girarPersonagem(graus)
     
     tween.Completed:Wait()
     
-    -- IMPORTANTE: Resetar o último comando após executar completamente
-    wait(0.3)
-    ultimoComando = ""
+    -- IMPORTANTE: NÃO resetar o último comando mais, para evitar múltiplas execuções
     executandoComando = false
 end
 
@@ -205,63 +204,65 @@ local function verificarComandos()
                     print("Posição X:", posicao.X)
                     print("========================================")
                     
-                    -- Extrair o comando após os dois pontos (ex: "RenandoEB26: Direita, volver." -> "Direita, volver.")
+                    -- Extrair o comando após os dois pontos
                     local comando = texto
                     if string.find(texto, ":") then
                         local partes = string.split(texto, ":")
                         if #partes >= 2 then
-                            -- Pegar tudo depois dos dois pontos e remover espaços no início
                             comando = partes[2]:match("^%s*(.-)%s*$") or partes[2]
                             print("COMANDO EXTRAÍDO:", comando)
                         end
                     else
-                        -- Se não tiver dois pontos, usar o texto direto
                         comando = texto:match("^%s*(.-)%s*$") or texto
                         print("TEXTO SEM DOIS PONTOS:", comando)
+                    end
+                    
+                    -- Criar ID único para o comando (texto + timestamp arredondado)
+                    local comandoID = comando .. "_" .. math.floor(tick() / 2)
+                    
+                    -- Verificar se já executou este comando recentemente
+                    if comandosExecutados[comandoID] then
+                        -- Já executou, ignorar
+                        return
                     end
                     
                     -- Verificar comandos EXATOS
                     -- Verificar comandos EXATOS
                     if comando == "Direita, volver." then
-                        if ultimoComando ~= comando then
-                            ultimoComando = comando
-                            detectionText.Text = "✓"
-                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            print("✓ Detectado: Direita, volver. - Aguardando 1s...")
-                            spawn(function() girarPersonagem(90) end)
-                        end
+                        comandosExecutados[comandoID] = true
+                        ultimoComando = comando
+                        detectionText.Text = "✓"
+                        detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        print("✓ Detectado: Direita, volver. - Aguardando 1s...")
+                        spawn(function() girarPersonagem(90) end)
                     elseif comando == "Esquerda, volver." then
-                        if ultimoComando ~= comando then
-                            ultimoComando = comando
-                            detectionText.Text = "✓"
-                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            print("✓ Detectado: Esquerda, volver. - Aguardando 1s...")
-                            spawn(function() girarPersonagem(-90) end)
-                        end
+                        comandosExecutados[comandoID] = true
+                        ultimoComando = comando
+                        detectionText.Text = "✓"
+                        detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        print("✓ Detectado: Esquerda, volver. - Aguardando 1s...")
+                        spawn(function() girarPersonagem(-90) end)
                     elseif comando == "Direita, inclinar." then
-                        if ultimoComando ~= comando then
-                            ultimoComando = comando
-                            detectionText.Text = "✓"
-                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            print("✓ Detectado: Direita, inclinar. - Aguardando 1s...")
-                            spawn(function() girarPersonagem(45) end)
-                        end
+                        comandosExecutados[comandoID] = true
+                        ultimoComando = comando
+                        detectionText.Text = "✓"
+                        detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        print("✓ Detectado: Direita, inclinar. - Aguardando 1s...")
+                        spawn(function() girarPersonagem(45) end)
                     elseif comando == "Esquerda, inclinar." then
-                        if ultimoComando ~= comando then
-                            ultimoComando = comando
-                            detectionText.Text = "✓"
-                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            print("✓ Detectado: Esquerda, inclinar. - Aguardando 1s...")
-                            spawn(function() girarPersonagem(-45) end)
-                        end
+                        comandosExecutados[comandoID] = true
+                        ultimoComando = comando
+                        detectionText.Text = "✓"
+                        detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        print("✓ Detectado: Esquerda, inclinar. - Aguardando 1s...")
+                        spawn(function() girarPersonagem(-45) end)
                     elseif comando == "Retaguarda, volver." then
-                        if ultimoComando ~= comando then
-                            ultimoComando = comando
-                            detectionText.Text = "✓"
-                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
-                            print("✓ Detectado: Retaguarda, volver. - Aguardando 1s...")
-                            spawn(function() girarPersonagem(180) end)
-                        end
+                        comandosExecutados[comandoID] = true
+                        ultimoComando = comando
+                        detectionText.Text = "✓"
+                        detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                        print("✓ Detectado: Retaguarda, volver. - Aguardando 1s...")
+                        spawn(function() girarPersonagem(180) end)
                     else
                         -- Comando inválido - mostrar só o erro
                         if comando ~= "" and comando ~= "exemplo" then
@@ -298,6 +299,9 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
         toggleButton.BorderColor3 = Color3.fromRGB(0, 255, 0)
         
+        -- Limpar comandos executados ao ativar
+        comandosExecutados = {}
+        
         spawn(verificarComandos)
         print("========================================")
         print("SISTEMA VOLVER ATIVADO!")
@@ -310,6 +314,9 @@ toggleButton.MouseButton1Click:Connect(function()
         toggleButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
         toggleButton.BorderColor3 = Color3.fromRGB(255, 0, 0)
         ultimoComando = ""
+        
+        -- Limpar comandos executados ao desativar
+        comandosExecutados = {}
         
         print("========================================")
         print("SISTEMA VOLVER DESATIVADO!")
