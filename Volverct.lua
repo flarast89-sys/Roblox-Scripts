@@ -19,7 +19,7 @@ screenGui.Parent = playerGui
 
 -- Frame principal da GUI
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 150)
+mainFrame.Size = UDim2.new(0, 300, 0, 220)
 mainFrame.Position = UDim2.new(0.5, -150, 0.1, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 mainFrame.BorderSizePixel = 3
@@ -95,6 +95,37 @@ toggleButton.TextSize = 18
 toggleButton.Font = Enum.Font.SourceSansBold
 toggleButton.Parent = mainFrame
 
+-- Display de detecção
+local detectionFrame = Instance.new("Frame")
+detectionFrame.Size = UDim2.new(1, -20, 0, 70)
+detectionFrame.Position = UDim2.new(0, 10, 0, 140)
+detectionFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+detectionFrame.BorderSizePixel = 2
+detectionFrame.BorderColor3 = Color3.fromRGB(100, 100, 100)
+detectionFrame.Parent = mainFrame
+
+local detectionTitle = Instance.new("TextLabel")
+detectionTitle.Size = UDim2.new(1, 0, 0, 20)
+detectionTitle.BackgroundTransparency = 1
+detectionTitle.Text = "ÚLTIMA DETECÇÃO:"
+detectionTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+detectionTitle.TextSize = 12
+detectionTitle.Font = Enum.Font.SourceSansBold
+detectionTitle.Parent = detectionFrame
+
+local detectionText = Instance.new("TextLabel")
+detectionText.Size = UDim2.new(1, -10, 1, -25)
+detectionText.Position = UDim2.new(0, 5, 0, 22)
+detectionText.BackgroundTransparency = 1
+detectionText.Text = "Aguardando comando..."
+detectionText.TextColor3 = Color3.fromRGB(150, 150, 150)
+detectionText.TextSize = 11
+detectionText.Font = Enum.Font.SourceSans
+detectionText.TextWrapped = true
+detectionText.TextXAlignment = Enum.TextXAlignment.Left
+detectionText.TextYAlignment = Enum.TextYAlignment.Top
+detectionText.Parent = detectionFrame
+
 -- Frame minimizado
 local minimizedFrame = Instance.new("Frame")
 minimizedFrame.Size = UDim2.new(0, 200, 0, 40)
@@ -132,8 +163,8 @@ local function girarPersonagem(graus)
     if executandoComando then return end
     executandoComando = true
     
-    -- Esperar 2 segundos antes de executar
-    wait(2)
+    -- Esperar 1 segundo antes de executar (REDUZIDO)
+    wait(1)
     
     -- CORRIGIDO: Invertendo a direção (negativo se torna positivo e vice-versa)
     local grausCorrigidos = -graus
@@ -141,9 +172,9 @@ local function girarPersonagem(graus)
     local currentCFrame = humanoidRootPart.CFrame
     local targetCFrame = currentCFrame * CFrame.Angles(0, math.rad(grausCorrigidos), 0)
     
-    -- Criar animação suave de 1 segundo
+    -- Criar animação suave de 0.5 segundos (MAIS RÁPIDO)
     local tweenInfo = TweenInfo.new(
-        1, -- Duração de 1 segundo
+        0.5, -- Duração de 0.5 segundos (antes era 1)
         Enum.EasingStyle.Quad, -- Estilo suave
         Enum.EasingDirection.InOut
     )
@@ -152,6 +183,10 @@ local function girarPersonagem(graus)
     tween:Play()
     
     tween.Completed:Wait()
+    
+    -- IMPORTANTE: Resetar o último comando após executar completamente
+    wait(0.3)
+    ultimoComando = ""
     executandoComando = false
 end
 
@@ -197,35 +232,65 @@ local function verificarComandos()
                     end
                     
                     -- Verificar comandos EXATOS
+                    -- Verificar comandos EXATOS
                     if comando == "Direita, volver." then
                         if ultimoComando ~= comando then
                             ultimoComando = comando
-                            print("✓ Detectado: Direita, volver. - Aguardando 2s...")
+                            detectionText.Text = "✓ VÁLIDO: " .. comando
+                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            print("✓ Detectado: Direita, volver. - Aguardando 1s...")
                             spawn(function() girarPersonagem(90) end)
                         end
                     elseif comando == "Esquerda, volver." then
                         if ultimoComando ~= comando then
                             ultimoComando = comando
-                            print("✓ Detectado: Esquerda, volver. - Aguardando 2s...")
+                            detectionText.Text = "✓ VÁLIDO: " .. comando
+                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            print("✓ Detectado: Esquerda, volver. - Aguardando 1s...")
                             spawn(function() girarPersonagem(-90) end)
                         end
                     elseif comando == "Direita, inclinar." then
                         if ultimoComando ~= comando then
                             ultimoComando = comando
-                            print("✓ Detectado: Direita, inclinar. - Aguardando 2s...")
+                            detectionText.Text = "✓ VÁLIDO: " .. comando
+                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            print("✓ Detectado: Direita, inclinar. - Aguardando 1s...")
                             spawn(function() girarPersonagem(45) end)
                         end
                     elseif comando == "Esquerda, inclinar." then
                         if ultimoComando ~= comando then
                             ultimoComando = comando
-                            print("✓ Detectado: Esquerda, inclinar. - Aguardando 2s...")
+                            detectionText.Text = "✓ VÁLIDO: " .. comando
+                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            print("✓ Detectado: Esquerda, inclinar. - Aguardando 1s...")
                             spawn(function() girarPersonagem(-45) end)
                         end
                     elseif comando == "Retaguarda, volver." then
                         if ultimoComando ~= comando then
                             ultimoComando = comando
-                            print("✓ Detectado: Retaguarda, volver. - Aguardando 2s...")
+                            detectionText.Text = "✓ VÁLIDO: " .. comando
+                            detectionText.TextColor3 = Color3.fromRGB(0, 255, 0)
+                            print("✓ Detectado: Retaguarda, volver. - Aguardando 1s...")
                             spawn(function() girarPersonagem(180) end)
+                        end
+                    else
+                        -- Comando inválido - mostrar erro
+                        if comando ~= "" and comando ~= "exemplo" then
+                            local erro = "✗ INVÁLIDO: " .. comando .. "\n"
+                            
+                            -- Verificar erros comuns
+                            if not string.find(comando, ",") then
+                                erro = erro .. "Falta vírgula (,)"
+                            elseif not string.find(comando, "%.") then
+                                erro = erro .. "Falta ponto final (.)"
+                            elseif comando:sub(1,1) ~= comando:sub(1,1):upper() then
+                                erro = erro .. "Primeira letra deve ser maiúscula"
+                            else
+                                erro = erro .. "Comando não reconhecido"
+                            end
+                            
+                            detectionText.Text = erro
+                            detectionText.TextColor3 = Color3.fromRGB(255, 0, 0)
                         end
                     end
                 end
