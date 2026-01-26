@@ -271,6 +271,17 @@ local function verificarComandos()
         end
         
         wait(0.1) -- Verificar a cada 0.1 segundos
+        
+        -- Debug: mostrar quantos elementos estão sendo verificados
+        local count = 0
+        for _, gui in pairs(playerGui:GetDescendants()) do
+            if gui:IsA("TextLabel") and gui.Visible and gui.Text ~= "" then
+                count = count + 1
+            end
+        end
+        if count > 0 then
+            print("Total de TextLabels visíveis:", count)
+        end
     end
 end
 
