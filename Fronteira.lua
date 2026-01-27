@@ -1,95 +1,37 @@
--- Combat GUI Mobile Optimized - VERSÃO CORRIGIDA
+-- COMBAT GUI + VOLVER INTEGRADO - VERSÃO CORRIGIDA
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local VirtualUser = game:GetService("VirtualUser")
 local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Configurações
+if PlayerGui:FindFirstChild("CombatGUI") then
+    PlayerGui:FindFirstChild("CombatGUI"):Destroy()
+end
+
+local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
 _G.Config = {
-    HeadSize = 25,
-    HitboxEnabled = false,
-    HitboxTeam = false,
-    NoclipEnabled = false,
-    SpeedEnabled = false,
-    SpeedValue = 16,
-    JumpEnabled = false,
-    JumpValue = 50,
-    AntiAFKEnabled = true,
-    ESPEnabled = false,
-    TeamESPEnabled = false,
-    FullbrightEnabled = false,
-    SelectedCommander = nil,
-    AutoVolverEnabled = false
+    HeadSize = 25, HitboxEnabled = false, HitboxTeam = false, HitboxInvisible = false,
+    NoclipEnabled = false, SpeedEnabled = false, SpeedValue = 16,
+    JumpEnabled = false, JumpValue = 50, AntiAFKEnabled = true,
+    ESPEnabled = false, TeamESPEnabled = false, FullbrightEnabled = false,
+    VolverAtivo = false, ultimoTexto = "", girando = false, ultimoComandoChat = ""
 }
 
--- Variáveis de controle
-local noclipConnection = nil
-local hitboxConnections = {}
-local originalSizes = {}
-local ESPObjects = {}
-local isRotating = false
-
--- Comandos Volver
-local VolverCommands = {
-    ["Direita, volver."] = -90,
-    ["/a Direita, volver."] = -90,
-    ["/A Direita, volver."] = -90,
-    ["/h Direita, volver."] = -90,
-    ["/H Direita, volver."] = -90,
-    [";h Direita, volver."] = -90,
-    [";H Direita, volver."] = -90,
-    
-    ["Esquerda, volver."] = 90,
-    ["/a Esquerda, volver."] = 90,
-    ["/A Esquerda, volver."] = 90,
-    ["/h Esquerda, volver."] = 90,
-    ["/H Esquerda, volver."] = 90,
-    [";h Esquerda, volver."] = 90,
-    [";H Esquerda, volver."] = 90,
-    
-    ["Direita, inclinar."] = -45,
-    ["/a Direita, inclinar."] = -45,
-    ["/A Direita, inclinar."] = -45,
-    ["/h Direita, inclinar."] = -45,
-    ["/H Direita, inclinar."] = -45,
-    [";h Direita, inclinar."] = -45,
-    [";H Direita, inclinar."] = -45,
-    
-    ["Esquerda, inclinar."] = 45,
-    ["/a Esquerda, inclinar."] = 45,
-    ["/A Esquerda, inclinar."] = 45,
-    ["/h Esquerda, inclinar."] = 45,
-    ["/H Esquerda, inclinar."] = 45,
-    [";h Esquerda, inclinar."] = 45,
-    [";H Esquerda, inclinar."] = 45,
-    
-    ["Retaguarda, volver."] = 180,
-    ["/a Retaguarda, volver."] = 180,
-    ["/A Retaguarda, volver."] = 180,
-    ["/h Retaguarda, volver."] = 180,
-    ["/H Retaguarda, volver."] = 180,
-    [";h Retaguarda, volver."] = 180,
-    [";H Retaguarda, volver."] = 180,
+local noclipConnection, originalSizes, ESPObjects = nil, {}, {}
+local originalLighting = {
+    Ambient = Lighting.Ambient, Brightness = Lighting.Brightness,
+    ColorShift_Bottom = Lighting.ColorShift_Bottom, ColorShift_Top = Lighting.ColorShift_Top,
+    OutdoorAmbient = Lighting.OutdoorAmbient, ClockTime = Lighting.ClockTime,
+    FogEnd = Lighting.FogEnd, FogStart = Lighting.FogStart, GlobalShadows = Lighting.GlobalShadows
 }
 
-local originalLightingSettings = {
-    Ambient = Lighting.Ambient,
-    Brightness = Lighting.Brightness,
-    ColorShift_Bottom = Lighting.ColorShift_Bottom,
-    ColorShift_Top = Lighting.ColorShift_Top,
-    OutdoorAmbient = Lighting.OutdoorAmbient,
-    ClockTime = Lighting.ClockTime,
-    FogEnd = Lighting.FogEnd,
-    FogStart = Lighting.FogStart,
-    GlobalShadows = Lighting.GlobalShadows
-}
-
--- Criar GUI
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CombatGUI"
 ScreenGui.ResetOnSpawn = false
@@ -100,9 +42,7 @@ local Blur = Instance.new("BlurEffect")
 Blur.Size = 0
 Blur.Parent = Lighting
 
--- Frame Principal
 local MainFrame = Instance.new("Frame")
-MainFrame.Name = "MainFrame"
 MainFrame.Size = UDim2.new(0, 380, 0, 620)
 MainFrame.Position = UDim2.new(0.5, -190, 0.5, -310)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
@@ -111,9 +51,13 @@ MainFrame.Active = true
 MainFrame.Draggable = true
 MainFrame.Parent = ScreenGui
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 16)
-MainCorner.Parent = MainFrame
+local function addCorner(parent, radius)
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, radius)
+    corner.Parent = parent
+end
+
+addCorner(MainFrame, 16)
 
 local MainStroke = Instance.new("UIStroke")
 MainStroke.Color = Color3.fromRGB(60, 60, 80)
@@ -121,16 +65,12 @@ MainStroke.Thickness = 1
 MainStroke.Transparency = 0.5
 MainStroke.Parent = MainFrame
 
--- Barra Superior
 local TopBar = Instance.new("Frame")
 TopBar.Size = UDim2.new(1, 0, 0, 55)
 TopBar.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TopBar.BorderSizePixel = 0
 TopBar.Parent = MainFrame
-
-local TopCorner = Instance.new("UICorner")
-TopCorner.CornerRadius = UDim.new(0, 16)
-TopCorner.Parent = TopBar
+addCorner(TopBar, 16)
 
 local TopFix = Instance.new("Frame")
 TopFix.Size = UDim2.new(1, 0, 0, 16)
@@ -139,7 +79,6 @@ TopFix.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 TopFix.BorderSizePixel = 0
 TopFix.Parent = TopBar
 
--- Logo e Título
 local Logo = Instance.new("TextLabel")
 Logo.Size = UDim2.new(0, 40, 0, 40)
 Logo.Position = UDim2.new(0, 10, 0.5, -20)
@@ -149,16 +88,13 @@ Logo.TextColor3 = Color3.fromRGB(255, 255, 255)
 Logo.TextSize = 24
 Logo.Font = Enum.Font.GothamBold
 Logo.Parent = TopBar
-
-local LogoCorner = Instance.new("UICorner")
-LogoCorner.CornerRadius = UDim.new(0, 10)
-LogoCorner.Parent = Logo
+addCorner(Logo, 10)
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -140, 1, 0)
 Title.Position = UDim2.new(0, 58, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Combat GUI"
+Title.Text = "Combat GUI Pro"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
@@ -169,14 +105,13 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v2.1 Fixed"
+Subtitle.Text = "v3.0 + Volver"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
 Subtitle.TextXAlignment = Enum.TextXAlignment.Left
 Subtitle.Parent = TopBar
 
--- Botão Minimizar
 local MinimizeButton = Instance.new("TextButton")
 MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
 MinimizeButton.Position = UDim2.new(1, -95, 0.5, -20)
@@ -186,12 +121,8 @@ MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 MinimizeButton.TextSize = 18
 MinimizeButton.Font = Enum.Font.GothamBold
 MinimizeButton.Parent = TopBar
+addCorner(MinimizeButton, 10)
 
-local MinCorner = Instance.new("UICorner")
-MinCorner.CornerRadius = UDim.new(0, 10)
-MinCorner.Parent = MinimizeButton
-
--- Botão Fechar
 local CloseButton = Instance.new("TextButton")
 CloseButton.Size = UDim2.new(0, 40, 0, 40)
 CloseButton.Position = UDim2.new(1, -50, 0.5, -20)
@@ -201,12 +132,8 @@ CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseButton.TextSize = 18
 CloseButton.Font = Enum.Font.GothamBold
 CloseButton.Parent = TopBar
+addCorner(CloseButton, 10)
 
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 10)
-CloseCorner.Parent = CloseButton
-
--- Botão Minimizado
 local MinimizedButton = Instance.new("TextButton")
 MinimizedButton.Size = UDim2.new(0, 70, 0, 70)
 MinimizedButton.Position = UDim2.new(1, -80, 0, 20)
@@ -219,39 +146,29 @@ MinimizedButton.Visible = false
 MinimizedButton.Active = true
 MinimizedButton.Draggable = true
 MinimizedButton.Parent = ScreenGui
+addCorner(MinimizedButton, 35)
 
-local MinBallCorner = Instance.new("UICorner")
-MinBallCorner.CornerRadius = UDim.new(1, 0)
-MinBallCorner.Parent = MinimizedButton
+local MinStroke = Instance.new("UIStroke")
+MinStroke.Color = Color3.fromRGB(150, 150, 255)
+MinStroke.Thickness = 3
+MinStroke.Parent = MinimizedButton
 
-local MinBallStroke = Instance.new("UIStroke")
-MinBallStroke.Color = Color3.fromRGB(150, 150, 255)
-MinBallStroke.Thickness = 3
-MinBallStroke.Parent = MinimizedButton
-
--- Container de Abas
 local TabContainer = Instance.new("Frame")
 TabContainer.Size = UDim2.new(1, -20, 0, 50)
 TabContainer.Position = UDim2.new(0, 10, 0, 65)
 TabContainer.BackgroundTransparency = 1
 TabContainer.Parent = MainFrame
 
--- Sistema de Abas
-local tabs = {}
-local frames = {}
+local tabs, frames = {}, {}
 
 local function createTab(name, icon, position)
     local tab = Instance.new("TextButton")
-    tab.Name = name .. "Tab"
     tab.Size = UDim2.new(0.25, -5, 1, 0)
     tab.Position = UDim2.new(position * 0.25, 0, 0, 0)
     tab.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     tab.Text = ""
     tab.Parent = TabContainer
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = tab
+    addCorner(tab, 10)
     
     local iconLabel = Instance.new("TextLabel")
     iconLabel.Size = UDim2.new(1, 0, 0, 22)
@@ -277,15 +194,13 @@ local function createTab(name, icon, position)
     return tab
 end
 
-local CombatTab = createTab("Combat", "⚔️", 0)
-local PlayerTab = createTab("Player", "👤", 1)
-local VisualTab = createTab("Visual", "👁️", 2)
-local VolverTab = createTab("Volver", "🎖️", 3)
+createTab("Combat", "⚔️", 0)
+createTab("Player", "👤", 1)
+createTab("Visual", "👁️", 2)
+createTab("Volver", "🎖️", 3)
 
--- Criar Frames
 local function createFrame(name)
     local frame = Instance.new("ScrollingFrame")
-    frame.Name = name .. "Frame"
     frame.Size = UDim2.new(1, -20, 1, -130)
     frame.Position = UDim2.new(0, 10, 0, 120)
     frame.BackgroundTransparency = 1
@@ -314,7 +229,6 @@ local PlayerFrame = createFrame("Player")
 local VisualFrame = createFrame("Visual")
 local VolverFrame = createFrame("Volver")
 
--- Função trocar abas
 local function switchTab(tabName)
     for name, tab in pairs(tabs) do
         tab.button.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -322,30 +236,26 @@ local function switchTab(tabName)
         tab.name.TextColor3 = Color3.fromRGB(150, 150, 170)
         frames[name].Visible = false
     end
-    
     tabs[tabName].button.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
     tabs[tabName].icon.TextColor3 = Color3.fromRGB(255, 255, 255)
     tabs[tabName].name.TextColor3 = Color3.fromRGB(255, 255, 255)
     frames[tabName].Visible = true
 end
 
-CombatTab.MouseButton1Click:Connect(function() switchTab("Combat") end)
-PlayerTab.MouseButton1Click:Connect(function() switchTab("Player") end)
-VisualTab.MouseButton1Click:Connect(function() switchTab("Visual") end)
-VolverTab.MouseButton1Click:Connect(function() switchTab("Volver") end)
+for name, tab in pairs(tabs) do
+    tab.button.MouseButton1Click:Connect(function()
+        switchTab(name)
+    end)
+end
 
--- Função criar Toggle
-local function createToggle(parent, text, default, callback, layoutOrder)
+local function createToggle(parent, text, default, callback, order)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, 0, 0, 50)
     container.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     container.BorderSizePixel = 0
-    container.LayoutOrder = layoutOrder
+    container.LayoutOrder = order
     container.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = container
+    addCorner(container, 10)
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -60, 1, 0)
@@ -365,10 +275,7 @@ local function createToggle(parent, text, default, callback, layoutOrder)
     toggle.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     toggle.Text = ""
     toggle.Parent = container
-    
-    local toggleCorner = Instance.new("UICorner")
-    toggleCorner.CornerRadius = UDim.new(1, 0)
-    toggleCorner.Parent = toggle
+    addCorner(toggle, 25)
     
     local circle = Instance.new("Frame")
     circle.Size = UDim2.new(0, 19, 0, 19)
@@ -376,14 +283,11 @@ local function createToggle(parent, text, default, callback, layoutOrder)
     circle.BackgroundColor3 = Color3.fromRGB(200, 200, 220)
     circle.BorderSizePixel = 0
     circle.Parent = toggle
-    
-    local circleCorner = Instance.new("UICorner")
-    circleCorner.CornerRadius = UDim.new(1, 0)
-    circleCorner.Parent = circle
+    addCorner(circle, 10)
     
     local enabled = default
     
-    local function updateToggle()
+    local function update()
         if enabled then
             TweenService:Create(toggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(100, 100, 255)}):Play()
             TweenService:Create(circle, TweenInfo.new(0.2), {Position = UDim2.new(1, -22, 0.5, -9.5), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
@@ -395,26 +299,21 @@ local function createToggle(parent, text, default, callback, layoutOrder)
     
     toggle.MouseButton1Click:Connect(function()
         enabled = not enabled
-        updateToggle()
+        update()
         callback(enabled)
     end)
     
-    updateToggle()
-    return container
+    update()
 end
 
--- Função criar Slider
-local function createSlider(parent, text, min, max, default, callback, layoutOrder)
+local function createSlider(parent, text, min, max, default, callback, order)
     local container = Instance.new("Frame")
     container.Size = UDim2.new(1, 0, 0, 65)
     container.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     container.BorderSizePixel = 0
-    container.LayoutOrder = layoutOrder
+    container.LayoutOrder = order
     container.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = container
+    addCorner(container, 10)
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -20, 0, 20)
@@ -444,20 +343,14 @@ local function createSlider(parent, text, min, max, default, callback, layoutOrd
     sliderBg.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
     sliderBg.BorderSizePixel = 0
     sliderBg.Parent = container
-    
-    local sliderCorner = Instance.new("UICorner")
-    sliderCorner.CornerRadius = UDim.new(1, 0)
-    sliderCorner.Parent = sliderBg
+    addCorner(sliderBg, 3)
     
     local fill = Instance.new("Frame")
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
     fill.BorderSizePixel = 0
     fill.Parent = sliderBg
-    
-    local fillCorner = Instance.new("UICorner")
-    fillCorner.CornerRadius = UDim.new(1, 0)
-    fillCorner.Parent = fill
+    addCorner(fill, 3)
     
     local dragging = false
     
@@ -475,65 +368,25 @@ local function createSlider(parent, text, min, max, default, callback, layoutOrd
         end
     end)
     
-    RunService.RenderStepped:Connect(function()
+    RunService.Heartbeat:Connect(function()
         if dragging then
             local mouse = LocalPlayer:GetMouse()
-            local relativeX = math.clamp(mouse.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
-            local percent = relativeX / sliderBg.AbsoluteSize.X
+            local relX = math.clamp(mouse.X - sliderBg.AbsolutePosition.X, 0, sliderBg.AbsoluteSize.X)
+            local percent = relX / sliderBg.AbsoluteSize.X
             local value = math.floor(min + (percent * (max - min)))
-            
             fill.Size = UDim2.new(percent, 0, 1, 0)
             valueLabel.Text = tostring(value)
             callback(value)
         end
     end)
-    
-    return container
 end
 
--- Função criar Botão
-local function createButton(parent, text, callback, layoutOrder)
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, 0, 0, 45)
-    button.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-    button.Text = text
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 14
-    button.Font = Enum.Font.GothamBold
-    button.LayoutOrder = layoutOrder
-    button.Parent = parent
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = button
-    
-    button.MouseButton1Click:Connect(function()
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(80, 80, 235)}):Play()
-        wait(0.1)
-        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(100, 100, 255)}):Play()
-        callback()
-    end)
-    
-    return button
-end
-
--- ==================
--- ABA COMBAT
--- ==================
-
-createSlider(CombatFrame, "Tamanho da Hitbox", 1, 100, 25, function(value)
-    _G.Config.HeadSize = value
-end, 1)
-
-createToggle(CombatFrame, "Hitbox no Time", false, function(value)
-    _G.Config.HitboxTeam = value
-end, 2)
-
-createToggle(CombatFrame, "Ativar Hitbox", false, function(value)
-    _G.Config.HitboxEnabled = value
-    
-    if not value then
-        -- Restaurar todos os tamanhos originais
+createSlider(CombatFrame, "Tamanho da Hitbox", 1, 100, 25, function(v) _G.Config.HeadSize = v end, 1)
+createToggle(CombatFrame, "Hitbox Invisível", false, function(v) _G.Config.HitboxInvisible = v end, 2)
+createToggle(CombatFrame, "Hitbox no Time", false, function(v) _G.Config.HitboxTeam = v end, 3)
+createToggle(CombatFrame, "Ativar Hitbox", false, function(v)
+    _G.Config.HitboxEnabled = v
+    if not v then
         for player, data in pairs(originalSizes) do
             if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
                 local hrp = player.Character.HumanoidRootPart
@@ -545,33 +398,22 @@ createToggle(CombatFrame, "Ativar Hitbox", false, function(value)
         end
         originalSizes = {}
     end
-end, 3)
+end, 4)
 
--- ==================
--- ABA PLAYER
--- ==================
-
-createToggle(PlayerFrame, "Noclip", false, function(value)
-    _G.Config.NoclipEnabled = value
-    
-    if value then
+createToggle(PlayerFrame, "Noclip", false, function(v)
+    _G.Config.NoclipEnabled = v
+    if v then
         noclipConnection = RunService.Stepped:Connect(function()
             pcall(function()
                 if LocalPlayer.Character then
                     for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            part.CanCollide = false
-                        end
+                        if part:IsA("BasePart") then part.CanCollide = false end
                     end
                 end
             end)
         end)
     else
-        if noclipConnection then
-            noclipConnection:Disconnect()
-            noclipConnection = nil
-        end
-        
+        if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
         pcall(function()
             if LocalPlayer.Character then
                 for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
@@ -584,74 +426,17 @@ createToggle(PlayerFrame, "Noclip", false, function(value)
     end
 end, 1)
 
-createToggle(PlayerFrame, "Anti-AFK", true, function(value)
-    _G.Config.AntiAFKEnabled = value
-end, 2)
+createToggle(PlayerFrame, "Anti-AFK", true, function(v) _G.Config.AntiAFKEnabled = v end, 2)
+createSlider(PlayerFrame, "Velocidade", 16, 100, 16, function(v) _G.Config.SpeedValue = v end, 3)
+createToggle(PlayerFrame, "Ativar Speed", false, function(v) _G.Config.SpeedEnabled = v end, 4)
+createSlider(PlayerFrame, "Força do Pulo", 50, 150, 50, function(v) _G.Config.JumpValue = v end, 5)
+createToggle(PlayerFrame, "Ativar Jump", false, function(v) _G.Config.JumpEnabled = v end, 6)
 
-createSlider(PlayerFrame, "Velocidade", 16, 100, 16, function(value)
-    _G.Config.SpeedValue = value
-end, 3)
-
-createToggle(PlayerFrame, "Ativar Speed", false, function(value)
-    _G.Config.SpeedEnabled = value
-end, 4)
-
-createSlider(PlayerFrame, "Força do Pulo", 50, 150, 50, function(value)
-    _G.Config.JumpValue = value
-end, 5)
-
-createToggle(PlayerFrame, "Ativar Jump", false, function(value)
-    _G.Config.JumpEnabled = value
-end, 6)
-
-createButton(PlayerFrame, "🔫 Pegar Arma AS VAL", function()
-    local pos1 = Vector3.new(119.21, 13.00, 194.23)
-    local pos2 = Vector3.new(228.34, 21.51, 9.05)
-    
-    local function teleportAndInteract(position)
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(position)
-            wait(0.3)
-            local vim = game:GetService("VirtualInputManager")
-            vim:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-            wait(0.1)
-            vim:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-            wait(0.5)
-        end
-    end
-    
-    local function resetCharacter()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.Health = 0
-            wait(5)
-        end
-    end
-    
-    teleportAndInteract(pos1)
-    teleportAndInteract(pos2)
-    resetCharacter()
-    teleportAndInteract(pos1)
-    teleportAndInteract(pos2)
-    resetCharacter()
-    teleportAndInteract(pos1)
-    teleportAndInteract(pos2)
-end, 7)
-
--- ==================
--- ABA VISUAL
--- ==================
-
-createToggle(VisualFrame, "ESP nos Jogadores", false, function(value)
-    _G.Config.ESPEnabled = value
-end, 1)
-
-createToggle(VisualFrame, "ESP no Meu Time", false, function(value)
-    _G.Config.TeamESPEnabled = value
-end, 2)
-
-createToggle(VisualFrame, "Fullbright", false, function(value)
-    _G.Config.FullbrightEnabled = value
-    if value then
+createToggle(VisualFrame, "ESP nos Jogadores", false, function(v) _G.Config.ESPEnabled = v end, 1)
+createToggle(VisualFrame, "ESP no Meu Time", false, function(v) _G.Config.TeamESPEnabled = v end, 2)
+createToggle(VisualFrame, "Fullbright", false, function(v)
+    _G.Config.FullbrightEnabled = v
+    if v then
         Lighting.Ambient = Color3.new(1, 1, 1)
         Lighting.Brightness = 2
         Lighting.ColorShift_Bottom = Color3.new(1, 1, 1)
@@ -662,102 +447,45 @@ createToggle(VisualFrame, "Fullbright", false, function(value)
         Lighting.FogStart = 0
         Lighting.GlobalShadows = false
     else
-        Lighting.Ambient = originalLightingSettings.Ambient
-        Lighting.Brightness = originalLightingSettings.Brightness
-        Lighting.ColorShift_Bottom = originalLightingSettings.ColorShift_Bottom
-        Lighting.ColorShift_Top = originalLightingSettings.ColorShift_Top
-        Lighting.OutdoorAmbient = originalLightingSettings.OutdoorAmbient
-        Lighting.ClockTime = originalLightingSettings.ClockTime
-        Lighting.FogEnd = originalLightingSettings.FogEnd
-        Lighting.FogStart = originalLightingSettings.FogStart
-        Lighting.GlobalShadows = originalLightingSettings.GlobalShadows
+        for k, v in pairs(originalLighting) do Lighting[k] = v end
     end
 end, 3)
 
--- ==================
--- ABA VOLVER
--- ==================
+local volverStatus = Instance.new("TextLabel")
+volverStatus.Size = UDim2.new(1, 0, 0, 60)
+volverStatus.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+volverStatus.Text = "⚔️ SISTEMA VOLVER\n\nStatus: DESATIVADO"
+volverStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+volverStatus.TextSize = 14
+volverStatus.Font = Enum.Font.GothamBold
+volverStatus.LayoutOrder = 1
+volverStatus.Parent = VolverFrame
+addCorner(volverStatus, 10)
 
-createToggle(VolverFrame, "🎖️ Ativar Auto Volver", false, function(value)
-    _G.Config.AutoVolverEnabled = value
-end, 1)
+createToggle(VolverFrame, "Ativar Sistema Volver", false, function(v)
+    _G.Config.VolverAtivo = v
+    if v then
+        volverStatus.Text = "⚔️ SISTEMA VOLVER\n\nStatus: ATIVADO ✓"
+        volverStatus.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        volverStatus.Text = "⚔️ SISTEMA VOLVER\n\nStatus: DESATIVADO"
+        volverStatus.TextColor3 = Color3.fromRGB(255, 100, 100)
+    end
+end, 2)
 
-local CommanderLabel = Instance.new("TextLabel")
-CommanderLabel.Size = UDim2.new(1, 0, 0, 40)
-CommanderLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-CommanderLabel.Text = "👤 Comandante: Nenhum"
-CommanderLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-CommanderLabel.TextSize = 13
-CommanderLabel.Font = Enum.Font.GothamBold
-CommanderLabel.LayoutOrder = 2
-CommanderLabel.Parent = VolverFrame
+local cmdMonitor = Instance.new("TextLabel")
+cmdMonitor.Size = UDim2.new(1, 0, 0, 80)
+cmdMonitor.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+cmdMonitor.Text = "📡 Últimos Comandos\n\nAguardando..."
+cmdMonitor.TextColor3 = Color3.fromRGB(150, 150, 170)
+cmdMonitor.TextSize = 12
+cmdMonitor.Font = Enum.Font.Code
+cmdMonitor.TextWrapped = true
+cmdMonitor.TextYAlignment = Enum.TextYAlignment.Top
+cmdMonitor.LayoutOrder = 3
+cmdMonitor.Parent = VolverFrame
+addCorner(cmdMonitor, 10)
 
-local cmdCorner = Instance.new("UICorner")
-cmdCorner.CornerRadius = UDim.new(0, 10)
-cmdCorner.Parent = CommanderLabel
-
-local PlayerListFrame = Instance.new("ScrollingFrame")
-PlayerListFrame.Size = UDim2.new(1, 0, 0, 250)
-PlayerListFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-PlayerListFrame.BorderSizePixel = 0
-PlayerListFrame.ScrollBarThickness = 4
-PlayerListFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 255)
-PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-PlayerListFrame.LayoutOrder = 3
-PlayerListFrame.Parent = VolverFrame
-
-local listCorner = Instance.new("UICorner")
-listCorner.CornerRadius = UDim.new(0, 10)
-listCorner.Parent = PlayerListFrame
-
-local ListLayout = Instance.new("UIListLayout")
-ListLayout.Padding = UDim.new(0, 5)
-ListLayout.SortOrder = Enum.SortOrder.Name
-ListLayout.Parent = PlayerListFrame
-
-ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    PlayerListFrame.CanvasSize = UDim2.new(0, 0, 0, ListLayout.AbsoluteContentSize.Y + 10)
-end)
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(1, 0, 0, 50)
-StatusLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-StatusLabel.Text = "⚠️ Ative o Auto Volver"
-StatusLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-StatusLabel.TextSize = 12
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.TextWrapped = true
-StatusLabel.LayoutOrder = 4
-StatusLabel.Parent = VolverFrame
-
-local statusCorner = Instance.new("UICorner")
-statusCorner.CornerRadius = UDim.new(0, 10)
-statusCorner.Parent = StatusLabel
-
--- Monitor de Comandos (mostra últimos comandos detectados)
-local CommandMonitor = Instance.new("TextLabel")
-CommandMonitor.Size = UDim2.new(1, 0, 0, 70)
-CommandMonitor.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-CommandMonitor.Text = "📡 Monitor de Comandos\n\nNenhum comando detectado"
-CommandMonitor.TextColor3 = Color3.fromRGB(150, 150, 170)
-CommandMonitor.TextSize = 11
-CommandMonitor.Font = Enum.Font.Code
-CommandMonitor.TextWrapped = true
-CommandMonitor.TextYAlignment = Enum.TextYAlignment.Top
-CommandMonitor.LayoutOrder = 5
-CommandMonitor.Parent = VolverFrame
-
-local monitorCorner = Instance.new("UICorner")
-monitorCorner.CornerRadius = UDim.new(0, 10)
-monitorCorner.Parent = CommandMonitor
-
-local commandHistory = {}
-
--- ==================
--- SISTEMAS
--- ==================
-
--- Anti-AFK
 LocalPlayer.Idled:Connect(function()
     if _G.Config.AntiAFKEnabled then
         VirtualUser:CaptureController()
@@ -765,68 +493,39 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Speed e Jump
-RunService.RenderStepped:Connect(function()
-    pcall(function()
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            local humanoid = LocalPlayer.Character.Humanoid
-            if _G.Config.SpeedEnabled then
-                humanoid.WalkSpeed = _G.Config.SpeedValue
-            else
-                humanoid.WalkSpeed = 16
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                local h = LocalPlayer.Character.Humanoid
+                h.WalkSpeed = _G.Config.SpeedEnabled and _G.Config.SpeedValue or 16
+                h.JumpPower = _G.Config.JumpEnabled and _G.Config.JumpValue or 50
             end
-            if _G.Config.JumpEnabled then
-                humanoid.JumpPower = _G.Config.JumpValue
-            else
-                humanoid.JumpPower = 50
-            end
-        end
-    end)
+        end)
+    end
 end)
 
--- Sistema Hitbox CORRIGIDO
 local function applyHitbox(player)
-    if not player.Character then return end
-    if player == LocalPlayer then return end
-    
+    if not player.Character or player == LocalPlayer then return end
     local hrp = player.Character:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
     
-    -- Salvar tamanho original apenas uma vez
     if not originalSizes[player] then
         originalSizes[player] = {
-            Size = hrp.Size,
-            Transparency = hrp.Transparency,
-            Material = hrp.Material,
-            CanCollide = hrp.CanCollide
+            Size = hrp.Size, Transparency = hrp.Transparency,
+            Material = hrp.Material, CanCollide = hrp.CanCollide
         }
     end
     
-    -- Verificar se deve aplicar hitbox
-    local shouldApply = false
+    local shouldApply = _G.Config.HitboxTeam or (player.Team ~= LocalPlayer.Team)
     
-    if _G.Config.HitboxTeam then
-        shouldApply = true
-    else
-        if player.Team ~= LocalPlayer.Team then
-            shouldApply = true
-        end
-    end
-    
-    -- Aplicar ou restaurar
     if _G.Config.HitboxEnabled and shouldApply then
         hrp.Size = Vector3.new(_G.Config.HeadSize, _G.Config.HeadSize, _G.Config.HeadSize)
-        hrp.Transparency = 0.7
+        hrp.Transparency = _G.Config.HitboxInvisible and 1 or 0.7
         hrp.Material = Enum.Material.Neon
         hrp.CanCollide = false
-        
-        if player.Team then
-            hrp.BrickColor = player.Team.TeamColor
-        else
-            hrp.BrickColor = BrickColor.new("Really blue")
-        end
+        hrp.BrickColor = player.Team and player.Team.TeamColor or BrickColor.new("Really blue")
     else
-        -- Restaurar valores originais
         if originalSizes[player] then
             hrp.Size = originalSizes[player].Size
             hrp.Transparency = originalSizes[player].Transparency
@@ -836,303 +535,168 @@ local function applyHitbox(player)
     end
 end
 
--- Aplicar hitbox continuamente
-RunService.RenderStepped:Connect(function()
-    if _G.Config.HitboxEnabled then
-        for _, player in pairs(Players:GetPlayers()) do
-            pcall(function()
-                applyHitbox(player)
-            end)
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.Config.HitboxEnabled then
+            for _, player in pairs(Players:GetPlayers()) do
+                pcall(function() applyHitbox(player) end)
+            end
         end
     end
 end)
 
--- Limpar dados quando jogador sair
 Players.PlayerRemoving:Connect(function(player)
     originalSizes[player] = nil
 end)
 
--- ESP System
 local function createESP(player)
     if player == LocalPlayer then return end
-    
-    local function addESP(character)
+    local function addESP(char)
         if ESPObjects[player] then
-            for _, obj in pairs(ESPObjects[player]) do
-                pcall(function() obj:Destroy() end)
-            end
+            for _, obj in pairs(ESPObjects[player]) do pcall(function() obj:Destroy() end) end
         end
-        
         ESPObjects[player] = {}
-        
         local highlight = Instance.new("Highlight")
-        highlight.Name = "ESP_Highlight"
         highlight.FillTransparency = 0.5
         highlight.OutlineTransparency = 0
-        highlight.Parent = character
-        
+        highlight.Parent = char
         table.insert(ESPObjects[player], highlight)
         
-        local function updateESP()
-            if not character or not character.Parent then return end
-            
-            local shouldShow = _G.Config.ESPEnabled
-            
-            if not _G.Config.TeamESPEnabled and player.Team == LocalPlayer.Team then
-                shouldShow = false
-            end
-            
-            highlight.Enabled = shouldShow
-            
-            if shouldShow and player.Team then
-                highlight.FillColor = player.TeamColor.Color
-                highlight.OutlineColor = player.TeamColor.Color
-            end
-        end
-        
-        RunService.RenderStepped:Connect(updateESP)
-    end
-    
-    if player.Character then
-        addESP(player.Character)
-    end
-    
-    player.CharacterAdded:Connect(addESP)
-end
-
-local function removeESP(player)
-    if ESPObjects[player] then
-        for _, obj in pairs(ESPObjects[player]) do
-            pcall(function() obj:Destroy() end)
-        end
-        ESPObjects[player] = nil
-    end
-end
-
-for _, player in pairs(Players:GetPlayers()) do
-    createESP(player)
-end
-
-Players.PlayerAdded:Connect(createESP)
-Players.PlayerRemoving:Connect(removeESP)
-
--- ==================
--- SISTEMA VOLVER
--- ==================
-
-local function updateStatus(text, color)
-    StatusLabel.Text = text
-    StatusLabel.TextColor3 = color or Color3.fromRGB(100, 255, 100)
-end
-
-local function createPlayerButton(player)
-    local Button = Instance.new("TextButton")
-    Button.Name = player.Name
-    Button.Size = UDim2.new(1, -10, 0, 40)
-    Button.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-    Button.Text = "  " .. player.Name .. (player == LocalPlayer and " (VOCÊ)" or "")
-    Button.TextColor3 = Color3.fromRGB(200, 200, 220)
-    Button.TextSize = 12
-    Button.Font = Enum.Font.Gotham
-    Button.TextXAlignment = Enum.TextXAlignment.Left
-    Button.Parent = PlayerListFrame
-    
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 8)
-    BtnCorner.Parent = Button
-    
-    local Indicator = Instance.new("Frame")
-    Indicator.Name = "Indicator"
-    Indicator.Size = UDim2.new(0, 4, 1, -10)
-    Indicator.Position = UDim2.new(0, 3, 0, 5)
-    Indicator.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-    Indicator.BorderSizePixel = 0
-    Indicator.Visible = false
-    Indicator.Parent = Button
-    
-    local IndCorner = Instance.new("UICorner")
-    IndCorner.CornerRadius = UDim.new(1, 0)
-    IndCorner.Parent = Indicator
-    
-    Button.MouseButton1Click:Connect(function()
-        for _, btn in pairs(PlayerListFrame:GetChildren()) do
-            if btn:IsA("TextButton") then
-                btn.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
-                local ind = btn:FindFirstChild("Indicator")
-                if ind then ind.Visible = false end
-            end
-        end
-        
-        Button.BackgroundColor3 = Color3.fromRGB(100, 100, 255)
-        Indicator.Visible = true
-        
-        _G.Config.SelectedCommander = player
-        CommanderLabel.Text = "👤 Comandante: " .. player.Name
-        CommanderLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
-        updateStatus("✅ Aguardando comandos de " .. player.Name, Color3.fromRGB(100, 255, 100))
-    end)
-    
-    return Button
-end
-
-local function updatePlayerList()
-    for _, child in pairs(PlayerListFrame:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        createPlayerButton(player)
-    end
-end
-
-local function rotateCharacter(degrees)
-    if isRotating then return false end
-    if not LocalPlayer.Character then return false end
-    
-    local HumanoidRootPart = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not HumanoidRootPart then return false end
-    
-    local Humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
-    if Humanoid then
-        Humanoid.AutoRotate = false
-    end
-    
-    isRotating = true
-    
-    local currentCFrame = HumanoidRootPart.CFrame
-    local overshoot = math.random(5, 10)
-    local firstRotation = degrees + (degrees > 0 and overshoot or -overshoot)
-    
-    local firstCFrame = currentCFrame * CFrame.Angles(0, math.rad(firstRotation), 0)
-    
-    local tween1 = TweenService:Create(HumanoidRootPart, 
-        TweenInfo.new(0.4, Enum.EasingStyle.Linear), 
-        {CFrame = firstCFrame})
-    tween1:Play()
-    tween1.Completed:Wait()
-    
-    local finalCFrame = currentCFrame * CFrame.Angles(0, math.rad(degrees), 0)
-    
-    local tween2 = TweenService:Create(HumanoidRootPart, 
-        TweenInfo.new(0.2, Enum.EasingStyle.Linear), 
-        {CFrame = finalCFrame})
-    tween2:Play()
-    tween2.Completed:Wait()
-    
-    if Humanoid then
-        Humanoid.AutoRotate = true
-    end
-    
-    isRotating = false
-    return true
-end
-
-local function processCommand(message, speaker)
-    -- Adicionar ao monitor
-    table.insert(commandHistory, 1, {
-        player = speaker.Name,
-        message = message,
-        time = os.date("%H:%M:%S")
-    })
-    
-    if #commandHistory > 3 then
-        table.remove(commandHistory, 4)
-    end
-    
-    local monitorText = "📡 Monitor de Comandos\n\n"
-    for i, cmd in ipairs(commandHistory) do
-        monitorText = monitorText .. string.format("[%s] %s: %s\n", cmd.time, cmd.player, cmd.message)
-    end
-    CommandMonitor.Text = monitorText
-    CommandMonitor.TextColor3 = Color3.fromRGB(100, 255, 100)
-    
-    task.delay(2, function()
-        CommandMonitor.TextColor3 = Color3.fromRGB(150, 150, 170)
-    end)
-    
-    -- Processar comando
-    if not _G.Config.SelectedCommander or speaker.UserId ~= _G.Config.SelectedCommander.UserId then
-        return
-    end
-    
-    if not _G.Config.AutoVolverEnabled then return end
-    
-    local angle = VolverCommands[message]
-    
-    if angle then
-        updateStatus("⏳ Executando comando...", Color3.fromRGB(255, 255, 100))
-        
         task.spawn(function()
-            task.wait(1.8)
-            local success = rotateCharacter(angle)
-            if success then
-                updateStatus(string.format("🔄 Executado: %d°", math.abs(angle)), Color3.fromRGB(100, 255, 100))
-                task.wait(1)
-                if _G.Config.SelectedCommander then
-                    updateStatus("✅ Aguardando comandos de " .. _G.Config.SelectedCommander.Name, Color3.fromRGB(100, 255, 100))
+            while task.wait(0.5) do
+                if not char or not char.Parent then break end
+                local shouldShow = _G.Config.ESPEnabled
+                if not _G.Config.TeamESPEnabled and player.Team == LocalPlayer.Team then shouldShow = false end
+                highlight.Enabled = shouldShow
+                if shouldShow and player.Team then
+                    highlight.FillColor = player.TeamColor.Color
+                    highlight.OutlineColor = player.TeamColor.Color
                 end
             end
         end)
     end
+    if player.Character then addESP(player.Character) end
+    player.CharacterAdded:Connect(addESP)
 end
 
--- Detectar comandos no TextChat (chat novo)
-pcall(function()
-    TextChatService.MessageReceived:Connect(function(message)
-        local speaker = Players:GetPlayerByUserId(message.TextSource.UserId)
-        if speaker then
-            processCommand(message.Text, speaker)
-        end
-    end)
-end)
-
--- Detectar comandos no Chat Legado
-local function connectPlayerChat(player)
-    player.Chatted:Connect(function(message)
-        processCommand(message, player)
-    end)
-end
-
--- Detectar comandos via Remote (cmdbar/cmdbar2)
-pcall(function()
-    local ReplicatedStorage = game:GetService("ReplicatedStorage")
-    local remotes = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
-    
-    if remotes then
-        local onMessageDoneFiltering = remotes:FindFirstChild("OnMessageDoneFiltering")
-        
-        if onMessageDoneFiltering then
-            onMessageDoneFiltering.OnClientEvent:Connect(function(messageData)
-                if messageData and messageData.FromSpeaker then
-                    local speaker = Players:FindFirstChild(messageData.FromSpeaker)
-                    if speaker and messageData.Message then
-                        processCommand(messageData.Message, speaker)
-                    end
-                end
-            end)
-        end
+for _, player in pairs(Players:GetPlayers()) do createESP(player) end
+Players.PlayerAdded:Connect(createESP)
+Players.PlayerRemoving:Connect(function(player)
+    if ESPObjects[player] then
+        for _, obj in pairs(ESPObjects[player]) do pcall(function() obj:Destroy() end) end
+        ESPObjects[player] = nil
     end
 end)
 
--- Sistema alternativo para capturar mensagens de cmdbar2
-pcall(function()
-    for _, obj in pairs(game:GetDescendants()) do
-        if obj:IsA("RemoteEvent") and (obj.Name:lower():find("chat") or obj.Name:lower():find("message")) then
-            obj.OnClientEvent:Connect(function(...)
-                local args = {...}
-                for _, arg in pairs(args) do
-                    if type(arg) == "table" then
-                        if arg.Message and arg.FromSpeaker then
-                            local speaker = Players:FindFirstChild(arg.FromSpeaker)
-                            if speaker then
-                                processCommand(arg.Message, speaker)
+local function girarPersonagem(graus)
+    if _G.Config.girando then return end
+    _G.Config.girando = true
+    task.wait(1)
+    local grausFinal = -graus
+    local cfAtual = humanoidRootPart.CFrame
+    local cfFinal = cfAtual * CFrame.Angles(0, math.rad(grausFinal), 0)
+    local tween = TweenService:Create(humanoidRootPart, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {CFrame = cfFinal})
+    tween:Play()
+    tween.Completed:Wait()
+    _G.Config.girando = false
+end
+
+local function processarComando(comando, origem)
+    if comando == "Direita, volver." or comando == "/a Direita, volver." then
+        cmdMonitor.Text = "📡 Últimos Comandos\n\n✓ Direita (" .. origem .. ")"
+        cmdMonitor.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.spawn(function() girarPersonagem(90) end)
+        return true
+    elseif comando == "Esquerda, volver." or comando == "/a Esquerda, volver." then
+        cmdMonitor.Text = "📡 Últimos Comandos\n\n✓ Esquerda (" .. origem .. ")"
+        cmdMonitor.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.spawn(function() girarPersonagem(-90) end)
+        return true
+    elseif comando == "Direita, inclinar." or comando == "/a Direita, inclinar." then
+        cmdMonitor.Text = "📡 Últimos Comandos\n\n✓ Inclinar Direita (" .. origem .. ")"
+        cmdMonitor.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.spawn(function() girarPersonagem(45) end)
+        return true
+    elseif comando == "Esquerda, inclinar." or comando == "/a Esquerda, inclinar." then
+        cmdMonitor.Text = "📡 Últimos Comandos\n\n✓ Inclinar Esquerda (" .. origem .. ")"
+        cmdMonitor.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.spawn(function() girarPersonagem(-45) end)
+        return true
+    elseif comando == "Retaguarda, volver." or comando == "/a Retaguarda, volver." then
+        cmdMonitor.Text = "📡 Últimos Comandos\n\n✓ Retaguarda (" .. origem .. ")"
+        cmdMonitor.TextColor3 = Color3.fromRGB(0, 255, 0)
+        task.spawn(function() girarPersonagem(180) end)
+        return true
+    end
+    return false
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.Config.VolverAtivo and not _G.Config.girando then
+            pcall(function()
+                for _, elemento in pairs(PlayerGui:GetDescendants()) do
+                    if elemento:IsA("TextLabel") and elemento.Visible and elemento.Text ~= "" then
+                        local pos = elemento.AbsolutePosition
+                        if pos.Y < 100 then
+                            local textoCompleto = elemento.Text
+                            if textoCompleto ~= _G.Config.ultimoTexto then
+                                _G.Config.ultimoTexto = textoCompleto
+                                local comando = textoCompleto
+                                if string.find(textoCompleto, ":") then
+                                    local partes = string.split(textoCompleto, ":")
+                                    if #partes >= 2 then
+                                        comando = partes[2]:match("^%s*(.-)%s*$")
+                                    end
+                                end
+                                processarComando(comando, "Topo")
+                                task.wait(2)
+                                _G.Config.ultimoTexto = ""
                             end
                         end
-                    elseif type(arg) == "string" then
-                        if _G.Config.SelectedCommander then
-                            processCommand(arg, _G.Config.SelectedCommander)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+pcall(function()
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local channels = TextChatService:WaitForChild("TextChannels", 5)
+        if channels then
+            local generalChannel = channels:WaitForChild("RBXGeneral", 5)
+            if generalChannel then
+                generalChannel.MessageReceived:Connect(function(message)
+                    if _G.Config.VolverAtivo and not _G.Config.girando then
+                        local texto = message.Text
+                        if texto ~= _G.Config.ultimoComandoChat then
+                            _G.Config.ultimoComandoChat = texto
+                            if processarComando(texto, "Chat") then
+                                task.wait(2)
+                                _G.Config.ultimoComandoChat = ""
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+pcall(function()
+    local events = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+    if events then
+        local onMsg = events:FindFirstChild("OnMessageDoneFiltering")
+        if onMsg then
+            onMsg.OnClientEvent:Connect(function(data)
+                if _G.Config.VolverAtivo and not _G.Config.girando then
+                    local texto = data.Message
+                    if texto ~= _G.Config.ultimoComandoChat then
+                        _G.Config.ultimoComandoChat = texto
+                        if processarComando(texto, "Chat") then
+                            task.wait(2)
+                            _G.Config.ultimoComandoChat = ""
                         end
                     end
                 end
@@ -1141,42 +705,18 @@ pcall(function()
     end
 end)
 
-for _, player in pairs(Players:GetPlayers()) do
-    connectPlayerChat(player)
-end
-
-Players.PlayerAdded:Connect(function(player)
-    connectPlayerChat(player)
-    task.wait(0.5)
-    updatePlayerList()
+LocalPlayer.CharacterAdded:Connect(function(char)
+    character = char
+    humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 end)
-
-Players.PlayerRemoving:Connect(function(player)
-    if _G.Config.SelectedCommander and player == _G.Config.SelectedCommander then
-        _G.Config.SelectedCommander = nil
-        CommanderLabel.Text = "👤 Comandante: Nenhum"
-        CommanderLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-        updateStatus("⚠️ Comandante saiu", Color3.fromRGB(255, 200, 100))
-    end
-    task.wait(0.5)
-    updatePlayerList()
-end)
-
-updatePlayerList()
-
--- ==================
--- BOTÕES GUI
--- ==================
 
 MinimizeButton.MouseButton1Click:Connect(function()
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
-    
-    wait(0.3)
+    task.wait(0.3)
     MainFrame.Visible = false
     MinimizedButton.Visible = true
-    
     MinimizedButton.Size = UDim2.new(0, 0, 0, 0)
     MinimizedButton.Position = UDim2.new(1, -45, 0, 55)
     TweenService:Create(MinimizedButton, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
@@ -1187,11 +727,9 @@ MinimizedButton.MouseButton1Click:Connect(function()
     TweenService:Create(MinimizedButton, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
-    
-    wait(0.3)
+    task.wait(0.3)
     MinimizedButton.Visible = false
     MainFrame.Visible = true
-    
     MainFrame.Size = UDim2.new(0, 0, 0, 0)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
@@ -1200,8 +738,6 @@ end)
 
 CloseButton.MouseButton1Click:Connect(function()
     _G.Config.HitboxEnabled = false
-    
-    -- Restaurar todos os tamanhos
     for player, data in pairs(originalSizes) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
@@ -1211,24 +747,17 @@ CloseButton.MouseButton1Click:Connect(function()
             hrp.CanCollide = data.CanCollide
         end
     end
-    
-    if noclipConnection then
-        noclipConnection:Disconnect()
-    end
-    
+    if noclipConnection then noclipConnection:Disconnect() end
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
     TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 0}):Play()
-    
-    wait(0.3)
+    task.wait(0.3)
     ScreenGui:Destroy()
     Blur:Destroy()
 end)
 
--- Efeito Blur ao abrir
 TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
-
--- Iniciar na aba Combat
 switchTab("Combat")
 
-print("✅ Combat GUI Mobile FIXED - Loaded Successfully!")
+print("✅ Combat GUI + Volver Carregado!")
+print("📌 GUI funcionando perfeitamente!")
