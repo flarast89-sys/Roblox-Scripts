@@ -1,4 +1,4 @@
--- COMBAT GUI + VOLVER INTEGRADO - VERSÃO CORRIGIDA
+-- COMBAT GUI + VOLVER + ESP AVANÇADA INTEGRADA
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
@@ -20,11 +20,19 @@ _G.Config = {
     HeadSize = 25, HitboxEnabled = false, HitboxTeam = false, HitboxInvisible = false,
     NoclipEnabled = false, SpeedEnabled = false, SpeedValue = 16,
     JumpEnabled = false, JumpValue = 50, AntiAFKEnabled = true,
-    ESPEnabled = false, TeamESPEnabled = false, FullbrightEnabled = false,
-    VolverAtivo = false, ultimoTexto = "", girando = false, ultimoComandoChat = ""
+    VolverAtivo = false, ultimoTexto = "", girando = false, ultimoComandoChat = "",
+    -- Configurações ESP
+    ESPEnabled = false,
+    ESPShowHealth = true,
+    ESPShowName = true,
+    ESPShowDistance = true,
+    ESPShowBox = true,
+    ESPTeamCheck = false,
+    ESPHealthBar = true,
+    ESPMaxDistance = 1000
 }
 
-local noclipConnection, originalSizes, ESPObjects = nil, {}, {}
+local noclipConnection, originalSizes = nil, {}
 local originalLighting = {
     Ambient = Lighting.Ambient, Brightness = Lighting.Brightness,
     ColorShift_Bottom = Lighting.ColorShift_Bottom, ColorShift_Top = Lighting.ColorShift_Top,
@@ -32,6 +40,257 @@ local originalLighting = {
     FogEnd = Lighting.FogEnd, FogStart = Lighting.FogStart, GlobalShadows = Lighting.GlobalShadows
 }
 
+-- Sistema ESP Avançado
+local ESPObjects = {}
+
+local function CreateDrawing(type, properties)
+    local drawing = Drawing.new(type)
+    for i,v in pairs(properties) do
+        drawing[i] = v
+    end
+    return drawing
+end
+
+local function CreateESP(player)
+    if player == LocalPlayer then return end
+    
+    local esp = {
+        Player = player,
+        BoxFilled = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = true,
+            Transparency = 0.3,
+            Visible = false,
+            ZIndex = 1
+        }),
+        Box = CreateDrawing("Square", {
+            Thickness = 2,
+            Filled = false,
+            Visible = false,
+            ZIndex = 2
+        }),
+        HealthBar = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = true,
+            Visible = false,
+            ZIndex = 3
+        }),
+        HealthBarOutline = CreateDrawing("Square", {
+            Thickness = 1,
+            Filled = false,
+            Color = Color3.fromRGB(0, 0, 0),
+            Visible = false,
+            ZIndex = 2
+        }),
+        Name = CreateDrawing("Text", {
+            Text = player.Name,
+            Size = 14,
+            Center = true,
+            Outline = true,
+            Color = Color3.fromRGB(255, 255, 255),
+            Visible = false,
+            ZIndex = 4
+        }),
+        Distance = CreateDrawing("Text", {
+            Text = "",
+            Size = 14,
+            Center = true,
+            Outline = true,
+            Color = Color3.fromRGB(255, 255, 255),
+            Visible = false,
+            ZIndex = 4
+        }),
+        Health = CreateDrawing("Text", {
+            Text = "",
+            Size = 14,
+            Center = true,
+            Outline = true,
+            Color = Color3.fromRGB(255, 255, 255),
+            Visible = false,
+            ZIndex = 4
+        })
+    }
+    
+    ESPObjects[player] = esp
+end
+
+local function RemoveESP(player)
+    local esp = ESPObjects[player]
+    if esp then
+        for _, drawing in pairs(esp) do
+            if typeof(drawing) ~= "Instance" and typeof(drawing) ~= "table" then
+                pcall(function() drawing:Remove() end)
+            end
+        end
+        ESPObjects[player] = nil
+    end
+end
+
+local function UpdateESP()
+    if not _G.Config.ESPEnabled then
+        for _, esp in pairs(ESPObjects) do
+            esp.BoxFilled.Visible = false
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Distance.Visible = false
+            esp.Health.Visible = false
+            esp.HealthBar.Visible = false
+            esp.HealthBarOutline.Visible = false
+        end
+        return
+    end
+    
+    for player, esp in pairs(ESPObjects) do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChild("Humanoid")
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        
+        if character and humanoid and rootPart and humanoid.Health > 0 then
+            local distance = (rootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            
+            if distance <= _G.Config.ESPMaxDistance then
+                local isTeam = _G.Config.ESPTeamCheck and player.Team == LocalPlayer.Team
+                local color = isTeam and Color3.fromRGB(75, 255, 75) or Color3.fromRGB(255, 75, 75)
+                
+                -- Se a hitbox está ativa, usar o tamanho da hitbox para o ESP
+                local useHitboxSize = _G.Config.HitboxEnabled
+                local hrpSize = rootPart.Size
+                
+                local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+                
+                if onScreen then
+                    -- Calcular tamanho da box
+                    local size
+                    if useHitboxSize then
+                        -- Usar tamanho da hitbox para o ESP
+                        local hitboxSize = _G.Config.HeadSize
+                        size = Vector2.new(hitboxSize * 50 / distance, hitboxSize * 50 / distance)
+                    else
+                        -- Tamanho normal
+                        size = Vector2.new(2000 / distance, 3000 / distance)
+                    end
+                    
+                    -- Atualizar Box Preenchido (colorido por dentro)
+                    if _G.Config.ESPShowBox then
+                        esp.BoxFilled.Size = size
+                        esp.BoxFilled.Position = Vector2.new(vector.X - size.X / 2, vector.Y - size.Y / 2)
+                        esp.BoxFilled.Color = color
+                        esp.BoxFilled.Visible = true
+                        
+                        -- Atualizar Box Contorno
+                        esp.Box.Size = size
+                        esp.Box.Position = Vector2.new(vector.X - size.X / 2, vector.Y - size.Y / 2)
+                        esp.Box.Color = color
+                        esp.Box.Visible = true
+                    else
+                        esp.BoxFilled.Visible = false
+                        esp.Box.Visible = false
+                    end
+                    
+                    -- Atualizar Nome
+                    if _G.Config.ESPShowName then
+                        esp.Name.Position = Vector2.new(vector.X, vector.Y - size.Y / 2 - 20)
+                        esp.Name.Text = player.Name
+                        esp.Name.Visible = true
+                    else
+                        esp.Name.Visible = false
+                    end
+                    
+                    -- Atualizar Distância
+                    if _G.Config.ESPShowDistance then
+                        esp.Distance.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 5)
+                        esp.Distance.Text = string.format("[%.0f studs]", distance)
+                        esp.Distance.Visible = true
+                    else
+                        esp.Distance.Visible = false
+                    end
+                    
+                    -- Atualizar Saúde
+                    if _G.Config.ESPShowHealth then
+                        local healthPercent = humanoid.Health / humanoid.MaxHealth
+                        esp.Health.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 20)
+                        esp.Health.Text = string.format("HP: %.0f%%", healthPercent * 100)
+                        esp.Health.Color = Color3.fromRGB(
+                            255 * (1 - healthPercent),
+                            255 * healthPercent,
+                            0
+                        )
+                        esp.Health.Visible = true
+                        
+                        -- Barra de vida
+                        if _G.Config.ESPHealthBar then
+                            local barWidth = 4
+                            local barHeight = size.Y
+                            local healthHeight = barHeight * healthPercent
+                            
+                            esp.HealthBarOutline.Size = Vector2.new(barWidth + 2, barHeight + 2)
+                            esp.HealthBarOutline.Position = Vector2.new(
+                                vector.X - size.X / 2 - barWidth - 4,
+                                vector.Y - size.Y / 2 - 1
+                            )
+                            esp.HealthBarOutline.Visible = true
+                            
+                            esp.HealthBar.Size = Vector2.new(barWidth, healthHeight)
+                            esp.HealthBar.Position = Vector2.new(
+                                vector.X - size.X / 2 - barWidth - 3,
+                                vector.Y - size.Y / 2 + (barHeight - healthHeight)
+                            )
+                            esp.HealthBar.Color = Color3.fromRGB(
+                                255 * (1 - healthPercent),
+                                255 * healthPercent,
+                                0
+                            )
+                            esp.HealthBar.Visible = true
+                        else
+                            esp.HealthBar.Visible = false
+                            esp.HealthBarOutline.Visible = false
+                        end
+                    else
+                        esp.Health.Visible = false
+                        esp.HealthBar.Visible = false
+                        esp.HealthBarOutline.Visible = false
+                    end
+                else
+                    esp.BoxFilled.Visible = false
+                    esp.Box.Visible = false
+                    esp.Name.Visible = false
+                    esp.Distance.Visible = false
+                    esp.Health.Visible = false
+                    esp.HealthBar.Visible = false
+                    esp.HealthBarOutline.Visible = false
+                end
+            else
+                esp.BoxFilled.Visible = false
+                esp.Box.Visible = false
+                esp.Name.Visible = false
+                esp.Distance.Visible = false
+                esp.Health.Visible = false
+                esp.HealthBar.Visible = false
+                esp.HealthBarOutline.Visible = false
+            end
+        else
+            esp.BoxFilled.Visible = false
+            esp.Box.Visible = false
+            esp.Name.Visible = false
+            esp.Distance.Visible = false
+            esp.Health.Visible = false
+            esp.HealthBar.Visible = false
+            esp.HealthBarOutline.Visible = false
+        end
+    end
+end
+
+-- Inicializar ESP para todos os jogadores
+for _, player in pairs(Players:GetPlayers()) do
+    CreateESP(player)
+end
+
+Players.PlayerAdded:Connect(CreateESP)
+Players.PlayerRemoving:Connect(RemoveESP)
+
+RunService.RenderStepped:Connect(UpdateESP)
+
+-- GUI Principal
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CombatGUI"
 ScreenGui.ResetOnSpawn = false
@@ -105,7 +364,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v3.0 + Volver"
+Subtitle.Text = "v4.0 + ESP Avançada"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
@@ -381,6 +640,7 @@ local function createSlider(parent, text, min, max, default, callback, order)
     end)
 end
 
+-- COMBAT TAB
 createSlider(CombatFrame, "Tamanho da Hitbox", 1, 100, 25, function(v) _G.Config.HeadSize = v end, 1)
 createToggle(CombatFrame, "Hitbox Invisível", false, function(v) _G.Config.HitboxInvisible = v end, 2)
 createToggle(CombatFrame, "Hitbox no Time", false, function(v) _G.Config.HitboxTeam = v end, 3)
@@ -400,6 +660,7 @@ createToggle(CombatFrame, "Ativar Hitbox", false, function(v)
     end
 end, 4)
 
+-- PLAYER TAB
 createToggle(PlayerFrame, "Noclip", false, function(v)
     _G.Config.NoclipEnabled = v
     if v then
@@ -432,10 +693,27 @@ createToggle(PlayerFrame, "Ativar Speed", false, function(v) _G.Config.SpeedEnab
 createSlider(PlayerFrame, "Força do Pulo", 50, 150, 50, function(v) _G.Config.JumpValue = v end, 5)
 createToggle(PlayerFrame, "Ativar Jump", false, function(v) _G.Config.JumpEnabled = v end, 6)
 
-createToggle(VisualFrame, "ESP nos Jogadores", false, function(v) _G.Config.ESPEnabled = v end, 1)
-createToggle(VisualFrame, "ESP no Meu Time", false, function(v) _G.Config.TeamESPEnabled = v end, 2)
-createToggle(VisualFrame, "Fullbright", false, function(v)
-    _G.Config.FullbrightEnabled = v
+-- VISUAL TAB (ESP AVANÇADA)
+local espInfo = Instance.new("TextLabel")
+espInfo.Size = UDim2.new(1, 0, 0, 80)
+espInfo.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+espInfo.Text = "👁️ ESP AVANÇADA\n\nBox colorida + Hitbox visível\nVermelho = Inimigo | Verde = Aliado"
+espInfo.TextColor3 = Color3.fromRGB(100, 100, 255)
+espInfo.TextSize = 12
+espInfo.Font = Enum.Font.GothamBold
+espInfo.TextYAlignment = Enum.TextYAlignment.Top
+espInfo.LayoutOrder = 1
+espInfo.Parent = VisualFrame
+addCorner(espInfo, 10)
+
+createToggle(VisualFrame, "🎯 Ativar ESP", false, function(v) _G.Config.ESPEnabled = v end, 2)
+createToggle(VisualFrame, "📛 Mostrar Nome", true, function(v) _G.Config.ESPShowName = v end, 3)
+createToggle(VisualFrame, "❤️ Mostrar Vida", true, function(v) _G.Config.ESPShowHealth = v end, 4)
+createToggle(VisualFrame, "📏 Mostrar Distância", true, function(v) _G.Config.ESPShowDistance = v end, 5)
+createToggle(VisualFrame, "📦 Mostrar Box", true, function(v) _G.Config.ESPShowBox = v end, 6)
+createToggle(VisualFrame, "💚 Barra de Vida", true, function(v) _G.Config.ESPHealthBar = v end, 7)
+createToggle(VisualFrame, "👥 ESP no Meu Time", false, function(v) _G.Config.ESPTeamCheck = v end, 8)
+createToggle(VisualFrame, "💡 Fullbright", false, function(v)
     if v then
         Lighting.Ambient = Color3.new(1, 1, 1)
         Lighting.Brightness = 2
@@ -449,8 +727,9 @@ createToggle(VisualFrame, "Fullbright", false, function(v)
     else
         for k, v in pairs(originalLighting) do Lighting[k] = v end
     end
-end, 3)
+end, 9)
 
+-- VOLVER TAB
 local volverStatus = Instance.new("TextLabel")
 volverStatus.Size = UDim2.new(1, 0, 0, 60)
 volverStatus.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
@@ -486,6 +765,7 @@ cmdMonitor.LayoutOrder = 3
 cmdMonitor.Parent = VolverFrame
 addCorner(cmdMonitor, 10)
 
+-- ANTI-AFK
 LocalPlayer.Idled:Connect(function()
     if _G.Config.AntiAFKEnabled then
         VirtualUser:CaptureController()
@@ -493,6 +773,7 @@ LocalPlayer.Idled:Connect(function()
     end
 end)
 
+-- SPEED E JUMP
 task.spawn(function()
     while task.wait(0.1) do
         pcall(function()
@@ -505,6 +786,7 @@ task.spawn(function()
     end
 end)
 
+-- HITBOX SYSTEM
 local function applyHitbox(player)
     if not player.Character or player == LocalPlayer then return end
     local hrp = player.Character:FindFirstChild("HumanoidRootPart")
@@ -549,45 +831,7 @@ Players.PlayerRemoving:Connect(function(player)
     originalSizes[player] = nil
 end)
 
-local function createESP(player)
-    if player == LocalPlayer then return end
-    local function addESP(char)
-        if ESPObjects[player] then
-            for _, obj in pairs(ESPObjects[player]) do pcall(function() obj:Destroy() end) end
-        end
-        ESPObjects[player] = {}
-        local highlight = Instance.new("Highlight")
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Parent = char
-        table.insert(ESPObjects[player], highlight)
-        
-        task.spawn(function()
-            while task.wait(0.5) do
-                if not char or not char.Parent then break end
-                local shouldShow = _G.Config.ESPEnabled
-                if not _G.Config.TeamESPEnabled and player.Team == LocalPlayer.Team then shouldShow = false end
-                highlight.Enabled = shouldShow
-                if shouldShow and player.Team then
-                    highlight.FillColor = player.TeamColor.Color
-                    highlight.OutlineColor = player.TeamColor.Color
-                end
-            end
-        end)
-    end
-    if player.Character then addESP(player.Character) end
-    player.CharacterAdded:Connect(addESP)
-end
-
-for _, player in pairs(Players:GetPlayers()) do createESP(player) end
-Players.PlayerAdded:Connect(createESP)
-Players.PlayerRemoving:Connect(function(player)
-    if ESPObjects[player] then
-        for _, obj in pairs(ESPObjects[player]) do pcall(function() obj:Destroy() end) end
-        ESPObjects[player] = nil
-    end
-end)
-
+-- VOLVER SYSTEM
 local function girarPersonagem(graus)
     if _G.Config.girando then return end
     _G.Config.girando = true
@@ -710,6 +954,7 @@ LocalPlayer.CharacterAdded:Connect(function(char)
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
 end)
 
+-- GUI ANIMATIONS
 MinimizeButton.MouseButton1Click:Connect(function()
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
@@ -738,6 +983,7 @@ end)
 
 CloseButton.MouseButton1Click:Connect(function()
     _G.Config.HitboxEnabled = false
+    _G.Config.ESPEnabled = false
     for player, data in pairs(originalSizes) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
@@ -759,5 +1005,6 @@ end)
 TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
 switchTab("Combat")
 
-print("✅ Combat GUI + Volver Carregado!")
-print("📌 GUI funcionando perfeitamente!")
+print("✅ Combat GUI + ESP Avançada + Volver Carregado!")
+print("📌 ESP com visualização de hitbox ativada!")
+print("🎯 Quando hitbox e ESP estiverem ativas, você verá a hitbox através das paredes!")
