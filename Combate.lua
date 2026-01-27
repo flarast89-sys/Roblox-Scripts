@@ -1,4 +1,4 @@
--- GUI VOLVER + HITBOX COLORIDA (ESP HITBOX MELHORADO)
+-- GUI VOLVER + HITBOX COLORIDA (CORRIGIDO - ESP COM FILTRO DE TIME)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -99,7 +99,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v1.1 ESP Melhorado"
+Subtitle.Text = "v1.2 Filtro Corrigido"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
@@ -441,7 +441,7 @@ createToggle(HitboxFrame, "Hitbox Invisível", false, function(v)
     _G.Config.HitboxInvisible = v
 end, 3)
 
-createToggle(HitboxFrame, "Hitbox Time", false, function(v)
+createToggle(HitboxFrame, "Hitbox Time (Mostrar Aliados)", false, function(v)
     _G.Config.HitboxTeam = v
 end, 4)
 
@@ -473,13 +473,25 @@ espSection.LayoutOrder = 1
 espSection.Parent = ESPFrame
 addCorner(espSection, 10)
 
-createToggle(ESPFrame, "ESP Players (Com Vida)", false, function(v)
-    _G.Config.ESPPlayers = v
-end, 2)
+local espInfo = Instance.new("TextLabel")
+espInfo.Size = UDim2.new(1, 0, 0, 50)
+espInfo.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+espInfo.Text = "ℹ️ Use 'Hitbox Time' para mostrar aliados"
+espInfo.TextColor3 = Color3.fromRGB(150, 150, 200)
+espInfo.TextSize = 11
+espInfo.Font = Enum.Font.Gotham
+espInfo.TextWrapped = true
+espInfo.LayoutOrder = 2
+espInfo.Parent = ESPFrame
+addCorner(espInfo, 10)
 
-createToggle(ESPFrame, "ESP Hitbox (Nome + Vida + Box)", false, function(v)
-    _G.Config.ESPHitbox = v
+createToggle(ESPFrame, "ESP Players (Highlight + Vida)", false, function(v)
+    _G.Config.ESPPlayers = v
 end, 3)
+
+createToggle(ESPFrame, "ESP Hitbox (Box + Nome + Vida)", false, function(v)
+    _G.Config.ESPHitbox = v
+end, 4)
 
 -- FUNÇÃO DE GIRAR PERSONAGEM (VOLVER)
 local function girarPersonagem(graus)
@@ -650,7 +662,7 @@ Players.PlayerRemoving:Connect(function(player)
     originalSizes[player] = nil
 end)
 
--- SISTEMA DE ESP MELHORADO
+-- SISTEMA DE ESP CORRIGIDO COM FILTRO DE TIME
 local function createESP(player)
     if player == LocalPlayer then return end
     
@@ -753,15 +765,19 @@ local function createESP(player)
         healthLabelHitbox.TextStrokeColor3 = Color3.new(0, 0, 0)
         healthLabelHitbox.Parent = billboardHitbox
         
-        -- Atualização em tempo real
+        -- Atualização em tempo real COM FILTRO DE TIME CORRETO
         task.spawn(function()
             while char and char.Parent and hrp and hrp.Parent and humanoid and humanoid.Parent do
                 task.wait(0.1)
                 
                 local teamColor = player.Team and player.Team.TeamColor.Color or Color3.new(0, 0.5, 1)
                 
+                -- FILTRO DE TIME: Mostrar apenas inimigos OU todos se HitboxTeam estiver ativado
+                local isEnemy = player.Team ~= LocalPlayer.Team
+                local shouldShow = _G.Config.HitboxTeam or isEnemy
+                
                 -- ESP Players
-                if _G.Config.ESPPlayers then
+                if _G.Config.ESPPlayers and shouldShow then
                     highlight.Enabled = true
                     billboard.Enabled = true
                     highlight.FillColor = teamColor
@@ -781,8 +797,8 @@ local function createESP(player)
                     billboard.Enabled = false
                 end
                 
-                -- ESP Hitbox (com nome e vida dinâmicos)
-                if _G.Config.ESPHitbox then
+                -- ESP Hitbox (com nome e vida dinâmicos) COM FILTRO DE TIME
+                if _G.Config.ESPHitbox and shouldShow then
                     boxAdornment.Visible = true
                     billboardHitbox.Enabled = true
                     boxAdornment.Size = hrp.Size
@@ -865,7 +881,12 @@ MinimizedButton.MouseButton1Click:Connect(function()
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
+    -- Desativar e limpar tudo ao fechar
     _G.Config.HitboxEnabled = false
+    _G.Config.ESPPlayers = false
+    _G.Config.ESPHitbox = false
+    
+    -- Restaurar hitboxes
     for player, data in pairs(originalSizes) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
@@ -875,15 +896,24 @@ CloseButton.MouseButton1Click:Connect(function()
             hrp.CanCollide = data.CanCollide
         end
     end
+    
+    -- Limpar ESP
+    for player, objects in pairs(ESPObjects) do
+        for _, obj in pairs(objects) do
+            pcall(function() obj:Destroy() end)
+        end
+    end
+    
     TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), 
         {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
     task.wait(0.3)
     ScreenGui:Destroy()
 end)
 
-print("✅ GUI Volver + Hitbox Carregada! (ESP Hitbox Melhorado)")
+print("✅ GUI Volver + Hitbox Carregada! (v1.2 - Filtro Corrigido)")
 print("📌 Sistema Volver funcionando!")
 print("🎯 Hitbox colorida por time ativada!")
-print("👁️ ESP Hitbox agora mostra Nome e Vida acima da hitbox!")
+print("👁️ ESP com filtro de time corrigido!")
+print("⚠️ Use 'Hitbox Time' para mostrar seu próprio time!")
 
 switchTab("Volver")
