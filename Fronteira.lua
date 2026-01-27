@@ -1,4 +1,4 @@
--- COMBAT GUI + VOLVER + ESP AVANÇADA INTEGRADA
+-- COMBAT GUI COMPLETO: ESP + VOLVER + FLY + COMBAT
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local VirtualUser = game:GetService("VirtualUser")
@@ -6,6 +6,7 @@ local Lighting = game:GetService("Lighting")
 local TweenService = game:GetService("TweenService")
 local TextChatService = game:GetService("TextChatService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
@@ -15,6 +16,7 @@ end
 
 local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local humanoid = character:WaitForChild("Humanoid")
 
 _G.Config = {
     HeadSize = 25, HitboxEnabled = false, HitboxTeam = false, HitboxInvisible = false,
@@ -29,7 +31,10 @@ _G.Config = {
     ESPShowBox = true,
     ESPTeamCheck = false,
     ESPHealthBar = true,
-    ESPMaxDistance = 1000
+    ESPMaxDistance = 1000,
+    -- Configurações Fly
+    FlyEnabled = false,
+    FlySpeed = 50
 }
 
 local noclipConnection, originalSizes = nil, {}
@@ -152,32 +157,24 @@ local function UpdateESP()
                 local isTeam = _G.Config.ESPTeamCheck and player.Team == LocalPlayer.Team
                 local color = isTeam and Color3.fromRGB(75, 255, 75) or Color3.fromRGB(255, 75, 75)
                 
-                -- Se a hitbox está ativa, usar o tamanho da hitbox para o ESP
                 local useHitboxSize = _G.Config.HitboxEnabled
-                local hrpSize = rootPart.Size
-                
                 local vector, onScreen = workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
                 
                 if onScreen then
-                    -- Calcular tamanho da box
                     local size
                     if useHitboxSize then
-                        -- Usar tamanho da hitbox para o ESP
                         local hitboxSize = _G.Config.HeadSize
                         size = Vector2.new(hitboxSize * 50 / distance, hitboxSize * 50 / distance)
                     else
-                        -- Tamanho normal
                         size = Vector2.new(2000 / distance, 3000 / distance)
                     end
                     
-                    -- Atualizar Box Preenchido (colorido por dentro)
                     if _G.Config.ESPShowBox then
                         esp.BoxFilled.Size = size
                         esp.BoxFilled.Position = Vector2.new(vector.X - size.X / 2, vector.Y - size.Y / 2)
                         esp.BoxFilled.Color = color
                         esp.BoxFilled.Visible = true
                         
-                        -- Atualizar Box Contorno
                         esp.Box.Size = size
                         esp.Box.Position = Vector2.new(vector.X - size.X / 2, vector.Y - size.Y / 2)
                         esp.Box.Color = color
@@ -187,7 +184,6 @@ local function UpdateESP()
                         esp.Box.Visible = false
                     end
                     
-                    -- Atualizar Nome
                     if _G.Config.ESPShowName then
                         esp.Name.Position = Vector2.new(vector.X, vector.Y - size.Y / 2 - 20)
                         esp.Name.Text = player.Name
@@ -196,7 +192,6 @@ local function UpdateESP()
                         esp.Name.Visible = false
                     end
                     
-                    -- Atualizar Distância
                     if _G.Config.ESPShowDistance then
                         esp.Distance.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 5)
                         esp.Distance.Text = string.format("[%.0f studs]", distance)
@@ -205,7 +200,6 @@ local function UpdateESP()
                         esp.Distance.Visible = false
                     end
                     
-                    -- Atualizar Saúde
                     if _G.Config.ESPShowHealth then
                         local healthPercent = humanoid.Health / humanoid.MaxHealth
                         esp.Health.Position = Vector2.new(vector.X, vector.Y + size.Y / 2 + 20)
@@ -217,7 +211,6 @@ local function UpdateESP()
                         )
                         esp.Health.Visible = true
                         
-                        -- Barra de vida
                         if _G.Config.ESPHealthBar then
                             local barWidth = 4
                             local barHeight = size.Y
@@ -280,15 +273,94 @@ local function UpdateESP()
     end
 end
 
--- Inicializar ESP para todos os jogadores
+-- Inicializar ESP
 for _, player in pairs(Players:GetPlayers()) do
     CreateESP(player)
 end
 
 Players.PlayerAdded:Connect(CreateESP)
 Players.PlayerRemoving:Connect(RemoveESP)
-
 RunService.RenderStepped:Connect(UpdateESP)
+
+-- Sistema de Voo
+local bodyVelocity, bodyGyro, flyConnection
+
+local function startFlying()
+    if _G.Config.FlyEnabled then return end
+    _G.Config.FlyEnabled = true
+    
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    bodyVelocity.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+    bodyVelocity.Parent = humanoidRootPart
+    
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.P = 9e4
+    bodyGyro.CFrame = humanoidRootPart.CFrame
+    bodyGyro.Parent = humanoidRootPart
+    
+    flyConnection = RunService.RenderStepped:Connect(function()
+        if not _G.Config.FlyEnabled or not character or not character.Parent then
+            if _G.Config.FlyEnabled then stopFlying() end
+            return
+        end
+        
+        local camera = workspace.CurrentCamera
+        local moveDirection = Vector3.new(0, 0, 0)
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+            moveDirection = moveDirection + camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+            moveDirection = moveDirection - camera.CFrame.LookVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+            moveDirection = moveDirection - camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+            moveDirection = moveDirection + camera.CFrame.RightVector
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
+        end
+        if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) or UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
+        end
+        
+        if moveDirection.Magnitude > 0 then
+            moveDirection = moveDirection.Unit
+        end
+        
+        if bodyVelocity then
+            bodyVelocity.Velocity = moveDirection * _G.Config.FlySpeed
+        end
+        
+        if bodyGyro then
+            bodyGyro.CFrame = camera.CFrame
+        end
+    end)
+end
+
+local function stopFlying()
+    if not _G.Config.FlyEnabled then return end
+    _G.Config.FlyEnabled = false
+    
+    if bodyVelocity then
+        bodyVelocity:Destroy()
+        bodyVelocity = nil
+    end
+    
+    if bodyGyro then
+        bodyGyro:Destroy()
+        bodyGyro = nil
+    end
+    
+    if flyConnection then
+        flyConnection:Disconnect()
+        flyConnection = nil
+    end
+end
 
 -- GUI Principal
 local ScreenGui = Instance.new("ScreenGui")
@@ -302,8 +374,8 @@ Blur.Size = 0
 Blur.Parent = Lighting
 
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 380, 0, 620)
-MainFrame.Position = UDim2.new(0.5, -190, 0.5, -310)
+MainFrame.Size = UDim2.new(0, 400, 0, 650)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -325)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -353,7 +425,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -140, 1, 0)
 Title.Position = UDim2.new(0, 58, 0, 0)
 Title.BackgroundTransparency = 1
-Title.Text = "Combat GUI Pro"
+Title.Text = "Combat GUI Ultimate"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 18
 Title.Font = Enum.Font.GothamBold
@@ -364,7 +436,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v4.0 + ESP Avançada"
+Subtitle.Text = "v5.0 Ultimate Edition"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
@@ -422,8 +494,8 @@ local tabs, frames = {}, {}
 
 local function createTab(name, icon, position)
     local tab = Instance.new("TextButton")
-    tab.Size = UDim2.new(0.25, -5, 1, 0)
-    tab.Position = UDim2.new(position * 0.25, 0, 0, 0)
+    tab.Size = UDim2.new(0.2, -4, 1, 0)
+    tab.Position = UDim2.new(position * 0.2, 0, 0, 0)
     tab.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
     tab.Text = ""
     tab.Parent = TabContainer
@@ -435,7 +507,7 @@ local function createTab(name, icon, position)
     iconLabel.BackgroundTransparency = 1
     iconLabel.Text = icon
     iconLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-    iconLabel.TextSize = 18
+    iconLabel.TextSize = 16
     iconLabel.Font = Enum.Font.GothamBold
     iconLabel.Parent = tab
     
@@ -445,7 +517,7 @@ local function createTab(name, icon, position)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Text = name
     nameLabel.TextColor3 = Color3.fromRGB(150, 150, 170)
-    nameLabel.TextSize = 10
+    nameLabel.TextSize = 9
     nameLabel.Font = Enum.Font.Gotham
     nameLabel.Parent = tab
     
@@ -456,7 +528,8 @@ end
 createTab("Combat", "⚔️", 0)
 createTab("Player", "👤", 1)
 createTab("Visual", "👁️", 2)
-createTab("Volver", "🎖️", 3)
+createTab("Fly", "✈️", 3)
+createTab("Volver", "🎖️", 4)
 
 local function createFrame(name)
     local frame = Instance.new("ScrollingFrame")
@@ -486,6 +559,7 @@ end
 local CombatFrame = createFrame("Combat")
 local PlayerFrame = createFrame("Player")
 local VisualFrame = createFrame("Visual")
+local FlyFrame = createFrame("Fly")
 local VolverFrame = createFrame("Volver")
 
 local function switchTab(tabName)
@@ -729,6 +803,28 @@ createToggle(VisualFrame, "💡 Fullbright", false, function(v)
     end
 end, 9)
 
+-- FLY TAB
+local flyInfo = Instance.new("TextLabel")
+flyInfo.Size = UDim2.new(1, 0, 0, 100)
+flyInfo.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+flyInfo.Text = "✈️ SISTEMA DE VOO\n\nControles:\nW/A/S/D - Mover\nSpace - Subir | Shift - Descer\nE - Ativar/Desativar"
+flyInfo.TextColor3 = Color3.fromRGB(100, 100, 255)
+flyInfo.TextSize = 12
+flyInfo.Font = Enum.Font.GothamBold
+flyInfo.TextYAlignment = Enum.TextYAlignment.Top
+flyInfo.LayoutOrder = 1
+flyInfo.Parent = FlyFrame
+addCorner(flyInfo, 10)
+
+createSlider(FlyFrame, "⚡ Velocidade de Voo", 20, 200, 50, function(v) _G.Config.FlySpeed = v end, 2)
+createToggle(FlyFrame, "🚀 Ativar Voo (Tecla E)", false, function(v)
+    if v then
+        startFlying()
+    else
+        stopFlying()
+    end
+end, 3)
+
 -- VOLVER TAB
 local volverStatus = Instance.new("TextLabel")
 volverStatus.Size = UDim2.new(1, 0, 0, 60)
@@ -764,6 +860,19 @@ cmdMonitor.TextYAlignment = Enum.TextYAlignment.Top
 cmdMonitor.LayoutOrder = 3
 cmdMonitor.Parent = VolverFrame
 addCorner(cmdMonitor, 10)
+
+-- Tecla E para alternar voo
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.E then
+        if _G.Config.FlyEnabled then
+            stopFlying()
+        else
+            startFlying()
+        end
+    end
+end)
 
 -- ANTI-AFK
 LocalPlayer.Idled:Connect(function()
@@ -952,6 +1061,8 @@ end)
 LocalPlayer.CharacterAdded:Connect(function(char)
     character = char
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+    humanoid = character:WaitForChild("Humanoid")
+    stopFlying()
 end)
 
 -- GUI ANIMATIONS
@@ -978,12 +1089,13 @@ MinimizedButton.MouseButton1Click:Connect(function()
     MainFrame.Size = UDim2.new(0, 0, 0, 0)
     MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     TweenService:Create(MainFrame, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), 
-        {Size = UDim2.new(0, 380, 0, 620), Position = UDim2.new(0.5, -190, 0.5, -310)}):Play()
+        {Size = UDim2.new(0, 400, 0, 650), Position = UDim2.new(0.5, -200, 0.5, -325)}):Play()
 end)
 
 CloseButton.MouseButton1Click:Connect(function()
     _G.Config.HitboxEnabled = false
     _G.Config.ESPEnabled = false
+    stopFlying()
     for player, data in pairs(originalSizes) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = player.Character.HumanoidRootPart
@@ -1005,6 +1117,8 @@ end)
 TweenService:Create(Blur, TweenInfo.new(0.3), {Size = 10}):Play()
 switchTab("Combat")
 
-print("✅ Combat GUI + ESP Avançada + Volver Carregado!")
-print("📌 ESP com visualização de hitbox ativada!")
-print("🎯 Quando hitbox e ESP estiverem ativas, você verá a hitbox através das paredes!")
+print("✅ Combat GUI Ultimate Edition Carregado!")
+print("📌 5 Abas: Combat | Player | Visual (ESP) | Fly | Volver")
+print("🎯 Hitbox + ESP sincronizadas para ver através das paredes!")
+print("✈️ Sistema de voo ativado - Pressione E para voar!")
+print("⚔️ Sistema Volver integrado!")
