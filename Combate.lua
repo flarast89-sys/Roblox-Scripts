@@ -1,4 +1,4 @@
--- GUI VOLVER + HITBOX COLORIDA
+-- GUI VOLVER + HITBOX COLORIDA (ESP HITBOX MELHORADO)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -99,7 +99,7 @@ local Subtitle = Instance.new("TextLabel")
 Subtitle.Size = UDim2.new(1, -140, 0, 20)
 Subtitle.Position = UDim2.new(0, 58, 0, 25)
 Subtitle.BackgroundTransparency = 1
-Subtitle.Text = "v1.0 Simplificado"
+Subtitle.Text = "v1.1 ESP Melhorado"
 Subtitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 Subtitle.TextSize = 11
 Subtitle.Font = Enum.Font.Gotham
@@ -477,7 +477,7 @@ createToggle(ESPFrame, "ESP Players (Com Vida)", false, function(v)
     _G.Config.ESPPlayers = v
 end, 2)
 
-createToggle(ESPFrame, "ESP Hitbox (Através da Parede)", false, function(v)
+createToggle(ESPFrame, "ESP Hitbox (Nome + Vida + Box)", false, function(v)
     _G.Config.ESPHitbox = v
 end, 3)
 
@@ -618,7 +618,6 @@ local function applyHitbox(player)
         }
     end
     
-    -- Verificar se deve aplicar hitbox (respeita o toggle HitboxTeam)
     local shouldApply = _G.Config.HitboxTeam or (player.Team ~= LocalPlayer.Team)
     
     if _G.Config.HitboxEnabled and shouldApply then
@@ -651,12 +650,11 @@ Players.PlayerRemoving:Connect(function(player)
     originalSizes[player] = nil
 end)
 
--- SISTEMA DE ESP
+-- SISTEMA DE ESP MELHORADO
 local function createESP(player)
     if player == LocalPlayer then return end
     
     local function addESP(char)
-        -- Limpar ESP anterior
         if ESPObjects[player] then
             for _, obj in pairs(ESPObjects[player]) do 
                 pcall(function() obj:Destroy() end) 
@@ -709,7 +707,7 @@ local function createESP(player)
         healthLabel.TextStrokeTransparency = 0.5
         healthLabel.Parent = billboard
         
-        -- ESP HITBOX (BoxHandleAdornment na HumanoidRootPart)
+        -- ESP HITBOX (BoxHandleAdornment + BillboardGui dinâmico)
         local boxAdornment = Instance.new("BoxHandleAdornment")
         boxAdornment.Name = "ESPHitbox"
         boxAdornment.Adornee = hrp
@@ -722,12 +720,44 @@ local function createESP(player)
         boxAdornment.Parent = hrp
         table.insert(ESPObjects[player], boxAdornment)
         
+        -- BillboardGui para ESP Hitbox (nome e vida acima da hitbox)
+        local billboardHitbox = Instance.new("BillboardGui")
+        billboardHitbox.Name = "ESPHitboxBillboard"
+        billboardHitbox.Adornee = hrp
+        billboardHitbox.Size = UDim2.new(0, 150, 0, 60)
+        billboardHitbox.AlwaysOnTop = true
+        billboardHitbox.Enabled = false
+        billboardHitbox.Parent = hrp
+        table.insert(ESPObjects[player], billboardHitbox)
+        
+        local nameLabelHitbox = Instance.new("TextLabel")
+        nameLabelHitbox.Size = UDim2.new(1, 0, 0, 25)
+        nameLabelHitbox.BackgroundTransparency = 1
+        nameLabelHitbox.Text = player.Name
+        nameLabelHitbox.TextColor3 = Color3.new(1, 1, 1)
+        nameLabelHitbox.TextSize = 16
+        nameLabelHitbox.Font = Enum.Font.GothamBold
+        nameLabelHitbox.TextStrokeTransparency = 0.3
+        nameLabelHitbox.TextStrokeColor3 = Color3.new(0, 0, 0)
+        nameLabelHitbox.Parent = billboardHitbox
+        
+        local healthLabelHitbox = Instance.new("TextLabel")
+        healthLabelHitbox.Size = UDim2.new(1, 0, 0, 22)
+        healthLabelHitbox.Position = UDim2.new(0, 0, 0, 25)
+        healthLabelHitbox.BackgroundTransparency = 1
+        healthLabelHitbox.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+        healthLabelHitbox.TextColor3 = Color3.new(0, 1, 0)
+        healthLabelHitbox.TextSize = 14
+        healthLabelHitbox.Font = Enum.Font.GothamBold
+        healthLabelHitbox.TextStrokeTransparency = 0.3
+        healthLabelHitbox.TextStrokeColor3 = Color3.new(0, 0, 0)
+        healthLabelHitbox.Parent = billboardHitbox
+        
         -- Atualização em tempo real
         task.spawn(function()
             while char and char.Parent and hrp and hrp.Parent and humanoid and humanoid.Parent do
                 task.wait(0.1)
                 
-                -- Atualizar cor do time
                 local teamColor = player.Team and player.Team.TeamColor.Color or Color3.new(0, 0.5, 1)
                 
                 -- ESP Players
@@ -738,7 +768,6 @@ local function createESP(player)
                     highlight.OutlineColor = teamColor
                     healthLabel.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
                     
-                    -- Cor da vida (verde > amarelo > vermelho)
                     local healthPercent = humanoid.Health / humanoid.MaxHealth
                     if healthPercent > 0.6 then
                         healthLabel.TextColor3 = Color3.new(0, 1, 0)
@@ -752,13 +781,33 @@ local function createESP(player)
                     billboard.Enabled = false
                 end
                 
-                -- ESP Hitbox
+                -- ESP Hitbox (com nome e vida dinâmicos)
                 if _G.Config.ESPHitbox then
                     boxAdornment.Visible = true
+                    billboardHitbox.Enabled = true
                     boxAdornment.Size = hrp.Size
                     boxAdornment.Color3 = teamColor
+                    
+                    -- Atualizar vida no ESP Hitbox
+                    healthLabelHitbox.Text = "HP: " .. math.floor(humanoid.Health) .. "/" .. math.floor(humanoid.MaxHealth)
+                    
+                    local healthPercent = humanoid.Health / humanoid.MaxHealth
+                    if healthPercent > 0.6 then
+                        healthLabelHitbox.TextColor3 = Color3.new(0, 1, 0)
+                    elseif healthPercent > 0.3 then
+                        healthLabelHitbox.TextColor3 = Color3.new(1, 1, 0)
+                    else
+                        healthLabelHitbox.TextColor3 = Color3.new(1, 0, 0)
+                    end
+                    
+                    -- Ajustar posição do BillboardGui baseado no tamanho da hitbox
+                    local hitboxSize = hrp.Size.Y
+                    local offsetY = (hitboxSize / 2) + 1.5
+                    billboardHitbox.StudsOffset = Vector3.new(0, offsetY, 0)
+                    
                 else
                     boxAdornment.Visible = false
+                    billboardHitbox.Enabled = false
                 end
             end
         end)
@@ -770,7 +819,6 @@ local function createESP(player)
     player.CharacterAdded:Connect(addESP)
 end
 
--- Aplicar ESP em todos os jogadores
 for _, player in pairs(Players:GetPlayers()) do 
     createESP(player) 
 end
@@ -786,7 +834,6 @@ Players.PlayerRemoving:Connect(function(player)
     end
 end)
 
--- ATUALIZAR CHARACTER
 LocalPlayer.CharacterAdded:Connect(function(char)
     character = char
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
@@ -834,9 +881,9 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("✅ GUI Volver + Hitbox Carregada!")
+print("✅ GUI Volver + Hitbox Carregada! (ESP Hitbox Melhorado)")
 print("📌 Sistema Volver funcionando!")
 print("🎯 Hitbox colorida por time ativada!")
+print("👁️ ESP Hitbox agora mostra Nome e Vida acima da hitbox!")
 
--- Ativar primeira aba
 switchTab("Volver")
