@@ -34,6 +34,7 @@ local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local TweenService = game:GetService("TweenService")
 local Stats = game:GetService("Stats")
+local Lighting = game:GetService("Lighting")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -49,6 +50,10 @@ local CurrentCycle = 0
 -- Variáveis Anti-AFK
 local AntiAFKEnabled = true
 local PlayTime = {hours = 0, minutes = 0, seconds = 0}
+
+-- Variáveis Fullbright
+local FullbrightEnabled = false
+local OriginalLightingSettings = {}
 
 -- Criar FOV Circle
 local FOVCircle = Drawing.new("Circle")
@@ -76,6 +81,77 @@ LocalPlayer.Idled:Connect(function()
 end)
 
 -- ═══════════════════════════════════════════════════════════════
+--                    FULLBRIGHT SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+
+local function SaveOriginalLighting()
+    OriginalLightingSettings = {
+        Ambient = Lighting.Ambient,
+        Brightness = Lighting.Brightness,
+        ColorShift_Bottom = Lighting.ColorShift_Bottom,
+        ColorShift_Top = Lighting.ColorShift_Top,
+        EnvironmentDiffuseScale = Lighting.EnvironmentDiffuseScale,
+        EnvironmentSpecularScale = Lighting.EnvironmentSpecularScale,
+        OutdoorAmbient = Lighting.OutdoorAmbient,
+        ClockTime = Lighting.ClockTime,
+        GeographicLatitude = Lighting.GeographicLatitude,
+        GlobalShadows = Lighting.GlobalShadows,
+        Technology = Lighting.Technology
+    }
+end
+
+local function EnableFullbright()
+    SaveOriginalLighting()
+    
+    Lighting.Ambient = Color3.new(1, 1, 1)
+    Lighting.Brightness = 2
+    Lighting.ColorShift_Bottom = Color3.new(1, 1, 1)
+    Lighting.ColorShift_Top = Color3.new(1, 1, 1)
+    Lighting.EnvironmentDiffuseScale = 1
+    Lighting.EnvironmentSpecularScale = 1
+    Lighting.OutdoorAmbient = Color3.new(1, 1, 1)
+    Lighting.ClockTime = 14
+    Lighting.GeographicLatitude = 0
+    Lighting.GlobalShadows = false
+    
+    -- Remover efeitos visuais que escurecem
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("BlurEffect") or 
+           effect:IsA("ColorCorrectionEffect") or 
+           effect:IsA("SunRaysEffect") or 
+           effect:IsA("BloomEffect") or
+           effect:IsA("DepthOfFieldEffect") then
+            effect.Enabled = false
+        end
+    end
+    
+    print("Fullbright ativado!")
+end
+
+local function DisableFullbright()
+    if next(OriginalLightingSettings) ~= nil then
+        for property, value in pairs(OriginalLightingSettings) do
+            pcall(function()
+                Lighting[property] = value
+            end)
+        end
+    end
+    
+    -- Reativar efeitos visuais
+    for _, effect in pairs(Lighting:GetChildren()) do
+        if effect:IsA("BlurEffect") or 
+           effect:IsA("ColorCorrectionEffect") or 
+           effect:IsA("SunRaysEffect") or 
+           effect:IsA("BloomEffect") or
+           effect:IsA("DepthOfFieldEffect") then
+            effect.Enabled = true
+        end
+    end
+    
+    print("Fullbright desativado!")
+end
+
+-- ═══════════════════════════════════════════════════════════════
 --                         CRIAR UI PRINCIPAL
 -- ═══════════════════════════════════════════════════════════════
 
@@ -87,8 +163,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- Frame Principal
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 350, 0, 380)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -190)
+MainFrame.Size = UDim2.new(0, 350, 0, 430)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -215)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -205,10 +281,26 @@ ValCorner.Parent = PegarValButton
 -- Status Farm
 local FarmStatus = CreateStatusLabel("FarmStatus", "Aguardando...", UDim2.new(0, 25, 0, 140), ContentFrame)
 
+-- Botão Fullbright
+local FullbrightButton = Instance.new("TextButton")
+FullbrightButton.Name = "FullbrightButton"
+FullbrightButton.Size = UDim2.new(0, 300, 0, 40)
+FullbrightButton.Position = UDim2.new(0, 25, 0, 185)
+FullbrightButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FullbrightButton.Text = "💡 BRILHO: OFF"
+FullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+FullbrightButton.TextSize = 16
+FullbrightButton.Font = Enum.Font.GothamBold
+FullbrightButton.Parent = ContentFrame
+
+local FullbrightCorner = Instance.new("UICorner")
+FullbrightCorner.CornerRadius = UDim.new(0, 8)
+FullbrightCorner.Parent = FullbrightButton
+
 -- Separador
 local Separator = Instance.new("Frame")
 Separator.Size = UDim2.new(0, 300, 0, 2)
-Separator.Position = UDim2.new(0, 25, 0, 185)
+Separator.Position = UDim2.new(0, 25, 0, 240)
 Separator.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 Separator.BorderSizePixel = 0
 Separator.Parent = ContentFrame
@@ -216,7 +308,7 @@ Separator.Parent = ContentFrame
 -- Anti-AFK Info Frame
 local AntiAFKFrame = Instance.new("Frame")
 AntiAFKFrame.Size = UDim2.new(0, 300, 0, 120)
-AntiAFKFrame.Position = UDim2.new(0, 25, 0, 200)
+AntiAFKFrame.Position = UDim2.new(0, 25, 0, 255)
 AntiAFKFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 AntiAFKFrame.BorderSizePixel = 0
 AntiAFKFrame.Parent = ContentFrame
@@ -297,7 +389,7 @@ local function ToggleMinimize()
     else
         -- Maximizar
         MainFrame:TweenSize(
-            UDim2.new(0, 350, 0, 380),
+            UDim2.new(0, 350, 0, 430),
             Enum.EasingDirection.Out,
             Enum.EasingStyle.Quad,
             0.3,
@@ -305,6 +397,24 @@ local function ToggleMinimize()
         )
         ContentFrame.Visible = true
         MinimizeButton.Text = "-"
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                    FUNÇÃO TOGGLE FULLBRIGHT
+-- ═══════════════════════════════════════════════════════════════
+
+local function ToggleFullbright()
+    FullbrightEnabled = not FullbrightEnabled
+    
+    if FullbrightEnabled then
+        EnableFullbright()
+        FullbrightButton.Text = "💡 BRILHO: ON"
+        FullbrightButton.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+    else
+        DisableFullbright()
+        FullbrightButton.Text = "💡 BRILHO: OFF"
+        FullbrightButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     end
 end
 
@@ -669,6 +779,15 @@ spawn(function()
     end
 end)
 
+-- Manter Fullbright ativo se estiver ligado
+spawn(function()
+    while wait(1) do
+        if FullbrightEnabled then
+            EnableFullbright()
+        end
+    end
+end)
+
 -- ═══════════════════════════════════════════════════════════════
 --                    EVENTOS UI
 -- ═══════════════════════════════════════════════════════════════
@@ -679,6 +798,10 @@ PegarValButton.MouseButton1Click:Connect(function()
     end
 end)
 
+FullbrightButton.MouseButton1Click:Connect(function()
+    ToggleFullbright()
+end)
+
 MinimizeButton.MouseButton1Click:Connect(function()
     ToggleMinimize()
 end)
@@ -686,6 +809,9 @@ end)
 CloseButton.MouseButton1Click:Connect(function()
     AutoFarmEnabled = false
     AntiAFKEnabled = false
+    if FullbrightEnabled then
+        DisableFullbright()
+    end
     ScreenGui:Destroy()
     FOVCircle:Remove()
     ClearAllESP()
@@ -776,5 +902,6 @@ print("════════════════════════�
 print("✅ AimLock: Pressione 'E'")
 print("✅ Auto Farm: Clique no botão roxo")
 print("✅ Anti-AFK: Ativo automaticamente")
+print("✅ Brilho: Botão '💡 BRILHO' para clarear o jogo")
 print("✅ Minimizar: Botão '-' no canto")
 print("════════════════════════════════════════════════")
