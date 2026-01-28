@@ -1,6 +1,8 @@
 -- ═══════════════════════════════════════════════════════════════
---                    SCRIPT COMPLETO - AIMLOCK + PEGAR AS VAL
+--           SCRIPT COMPLETO - AIMLOCK + FARM + ANTI-AFK
 -- ═══════════════════════════════════════════════════════════════
+
+repeat wait() until game:IsLoaded() and game.Players and game.Players.LocalPlayer and game.Players.LocalPlayer.Character
 
 -- Configurações AimLock
 local AimSettings = {
@@ -30,6 +32,8 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+local Stats = game:GetService("Stats")
 local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -42,6 +46,10 @@ local ESPObjects = {}
 local AutoFarmEnabled = false
 local CurrentCycle = 0
 
+-- Variáveis Anti-AFK
+local AntiAFKEnabled = true
+local PlayTime = {hours = 0, minutes = 0, seconds = 0}
+
 -- Criar FOV Circle
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
@@ -53,7 +61,22 @@ FOVCircle.Transparency = 1
 FOVCircle.NumSides = 64
 
 -- ═══════════════════════════════════════════════════════════════
---                         CRIAR UI
+--                    ANTI-AFK SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+
+local VirtualUser = game:GetService('VirtualUser')
+
+-- Prevenir kick por inatividade
+LocalPlayer.Idled:Connect(function()
+    if AntiAFKEnabled then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton2(Vector2.new())
+        print("Anti-AFK ativado!")
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+--                         CRIAR UI PRINCIPAL
 -- ═══════════════════════════════════════════════════════════════
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -64,8 +87,8 @@ ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 -- Frame Principal
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 350, 0, 250)
-MainFrame.Position = UDim2.new(0.5, -175, 0.5, -125)
+MainFrame.Size = UDim2.new(0, 350, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -175, 0.5, -190)
 MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Active = true
@@ -90,7 +113,7 @@ HeaderCorner.Parent = Header
 
 local Title = Instance.new("TextLabel")
 Title.Name = "Title"
-Title.Size = UDim2.new(1, -20, 1, 0)
+Title.Size = UDim2.new(1, -100, 1, 0)
 Title.Position = UDim2.new(0, 10, 0, 0)
 Title.BackgroundTransparency = 1
 Title.Text = "🎯 AIMLOCK + AS VAL"
@@ -99,6 +122,22 @@ Title.TextSize = 20
 Title.Font = Enum.Font.GothamBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.Parent = Header
+
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
+MinimizeButton.Position = UDim2.new(1, -90, 0, 5)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(200, 150, 0)
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 25
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Parent = Header
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeButton
 
 -- Close Button
 local CloseButton = Instance.new("TextButton")
@@ -115,6 +154,14 @@ CloseButton.Parent = Header
 local CloseCorner = Instance.new("UICorner")
 CloseCorner.CornerRadius = UDim.new(0, 8)
 CloseCorner.Parent = CloseButton
+
+-- Content Frame (para esconder ao minimizar)
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, 0, 1, -50)
+ContentFrame.Position = UDim2.new(0, 0, 0, 50)
+ContentFrame.BackgroundTransparency = 1
+ContentFrame.Parent = MainFrame
 
 -- Função para criar label de status
 local function CreateStatusLabel(name, text, position, parent)
@@ -137,28 +184,129 @@ local function CreateStatusLabel(name, text, position, parent)
 end
 
 -- Info AimLock
-local AimInfo = CreateStatusLabel("AimInfo", "Ativar AimLock: Tecla E", UDim2.new(0, 25, 0, 70), MainFrame)
+local AimInfo = CreateStatusLabel("AimInfo", "Ativar AimLock: Tecla E", UDim2.new(0, 25, 0, 20), ContentFrame)
 
 -- Botão Pegar AS VAL
 local PegarValButton = Instance.new("TextButton")
 PegarValButton.Name = "PegarValButton"
 PegarValButton.Size = UDim2.new(0, 300, 0, 60)
-PegarValButton.Position = UDim2.new(0, 25, 0, 115)
+PegarValButton.Position = UDim2.new(0, 25, 0, 65)
 PegarValButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 PegarValButton.Text = "⚡ PEGAR AS VAL"
 PegarValButton.TextColor3 = Color3.fromRGB(255, 255, 255)
 PegarValButton.TextSize = 20
 PegarValButton.Font = Enum.Font.GothamBold
-PegarValButton.Parent = MainFrame
+PegarValButton.Parent = ContentFrame
 
 local ValCorner = Instance.new("UICorner")
 ValCorner.CornerRadius = UDim.new(0, 8)
 ValCorner.Parent = PegarValButton
 
 -- Status Farm
-local FarmStatus = CreateStatusLabel("FarmStatus", "Aguardando...", UDim2.new(0, 25, 0, 190), MainFrame)
+local FarmStatus = CreateStatusLabel("FarmStatus", "Aguardando...", UDim2.new(0, 25, 0, 140), ContentFrame)
+
+-- Separador
+local Separator = Instance.new("Frame")
+Separator.Size = UDim2.new(0, 300, 0, 2)
+Separator.Position = UDim2.new(0, 25, 0, 185)
+Separator.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
+Separator.BorderSizePixel = 0
+Separator.Parent = ContentFrame
+
+-- Anti-AFK Info Frame
+local AntiAFKFrame = Instance.new("Frame")
+AntiAFKFrame.Size = UDim2.new(0, 300, 0, 120)
+AntiAFKFrame.Position = UDim2.new(0, 25, 0, 200)
+AntiAFKFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+AntiAFKFrame.BorderSizePixel = 0
+AntiAFKFrame.Parent = ContentFrame
+
+local AntiAFKCorner = Instance.new("UICorner")
+AntiAFKCorner.CornerRadius = UDim.new(0, 8)
+AntiAFKCorner.Parent = AntiAFKFrame
+
+-- Anti-AFK Title
+local AntiAFKTitle = Instance.new("TextLabel")
+AntiAFKTitle.Size = UDim2.new(1, -20, 0, 25)
+AntiAFKTitle.Position = UDim2.new(0, 10, 0, 5)
+AntiAFKTitle.BackgroundTransparency = 1
+AntiAFKTitle.Text = "🛡️ ANTI-AFK ATIVO"
+AntiAFKTitle.TextColor3 = Color3.fromRGB(0, 255, 0)
+AntiAFKTitle.TextSize = 16
+AntiAFKTitle.Font = Enum.Font.GothamBold
+AntiAFKTitle.Parent = AntiAFKFrame
+
+-- Timer Label
+local TimerLabel = Instance.new("TextLabel")
+TimerLabel.Size = UDim2.new(1, -20, 0, 20)
+TimerLabel.Position = UDim2.new(0, 10, 0, 35)
+TimerLabel.BackgroundTransparency = 1
+TimerLabel.Text = "⏱️ Tempo: 0:0:0"
+TimerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TimerLabel.TextSize = 14
+TimerLabel.Font = Enum.Font.Gotham
+TimerLabel.TextXAlignment = Enum.TextXAlignment.Left
+TimerLabel.Parent = AntiAFKFrame
+
+-- FPS Label
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Size = UDim2.new(1, -20, 0, 20)
+FPSLabel.Position = UDim2.new(0, 10, 0, 60)
+FPSLabel.BackgroundTransparency = 1
+FPSLabel.Text = "📊 FPS: 60"
+FPSLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FPSLabel.TextSize = 14
+FPSLabel.Font = Enum.Font.Gotham
+FPSLabel.TextXAlignment = Enum.TextXAlignment.Left
+FPSLabel.Parent = AntiAFKFrame
+
+-- Ping Label
+local PingLabel = Instance.new("TextLabel")
+PingLabel.Size = UDim2.new(1, -20, 0, 20)
+PingLabel.Position = UDim2.new(0, 10, 0, 85)
+PingLabel.BackgroundTransparency = 1
+PingLabel.Text = "📡 Ping: 0"
+PingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+PingLabel.TextSize = 14
+PingLabel.Font = Enum.Font.Gotham
+PingLabel.TextXAlignment = Enum.TextXAlignment.Left
+PingLabel.Parent = AntiAFKFrame
 
 ScreenGui.Parent = LocalPlayer.PlayerGui
+
+-- ═══════════════════════════════════════════════════════════════
+--                    FUNÇÕES DE MINIMIZAR
+-- ═══════════════════════════════════════════════════════════════
+
+local IsMinimized = false
+
+local function ToggleMinimize()
+    IsMinimized = not IsMinimized
+    
+    if IsMinimized then
+        -- Minimizar
+        MainFrame:TweenSize(
+            UDim2.new(0, 350, 0, 50),
+            Enum.EasingDirection.Out,
+            Enum.EasingStyle.Quad,
+            0.3,
+            true
+        )
+        ContentFrame.Visible = false
+        MinimizeButton.Text = "+"
+    else
+        -- Maximizar
+        MainFrame:TweenSize(
+            UDim2.new(0, 350, 0, 380),
+            Enum.EasingDirection.Out,
+            Enum.EasingStyle.Quad,
+            0.3,
+            true
+        )
+        ContentFrame.Visible = true
+        MinimizeButton.Text = "-"
+    end
+end
 
 -- ═══════════════════════════════════════════════════════════════
 --                    FUNÇÕES AIMLOCK
@@ -308,19 +456,16 @@ end
 --                    FUNÇÕES AUTO FARM
 -- ═══════════════════════════════════════════════════════════════
 
--- Função para verificar se está vivo
 local function IsAlive()
     if not LocalPlayer.Character then return false end
     local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
     return humanoid and humanoid.Health > 0
 end
 
--- Função para aguardar morte
 local function WaitForDeath()
     FarmStatus.Text = "⚔️ Aguardando você morrer..."
     print("Aguardando morte do jogador...")
     
-    -- Aguardar até morrer
     local humanoid = LocalPlayer.Character:FindFirstChild("Humanoid")
     if humanoid then
         repeat 
@@ -333,20 +478,13 @@ local function WaitForDeath()
     FarmStatus.Text = "💀 Morreu! Aguardando respawn..."
     print("Jogador morreu! Aguardando respawn...")
     
-    -- Esperar personagem sumir
     repeat wait(0.1) until not LocalPlayer.Character or not LocalPlayer.Character.Parent
-    
-    -- Esperar novo personagem
     repeat wait(0.1) until LocalPlayer.Character
-    
-    -- Esperar HumanoidRootPart
     repeat wait(0.1) until LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     
-    -- Esperar Humanoid estar vivo
     humanoid = LocalPlayer.Character:WaitForChild("Humanoid")
     repeat wait(0.1) until humanoid.Health > 0
     
-    -- Tempo extra de segurança
     wait(FarmSettings.RespawnWaitTime)
     
     FarmStatus.Text = "✅ Respawnado! Próximo ciclo..."
@@ -367,14 +505,12 @@ end
 local function PressE()
     print("Pressionando tecla E...")
     
-    -- Método 1: VirtualInputManager
     VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
     wait(0.05)
     VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
     
     wait(0.1)
     
-    -- Método 2: Backup usando mouse1click se houver ferramenta equipada
     local tool = LocalPlayer.Character:FindFirstChildOfClass("Tool")
     if tool then
         tool:Activate()
@@ -393,7 +529,6 @@ local function MoveAround()
     print("Movimentando personagem...")
     local hrp = LocalPlayer.Character.HumanoidRootPart
     
-    -- Movimento em pequeno círculo
     for i = 1, 8 do
         if not IsAlive() or not AutoFarmEnabled then break end
         
@@ -422,7 +557,6 @@ local function RunCompleteFarm()
             print("INICIANDO CICLO " .. cycle .. "/" .. FarmSettings.TotalCycles)
             print("═══════════════════════════════════════")
             
-            -- PASSO 1: Teleportar para Position1
             print("PASSO 1: Teleportando para Position1...")
             if not Teleport(FarmSettings.Position1) then
                 print("Erro no teleporte! Tentando novamente...")
@@ -431,13 +565,11 @@ local function RunCompleteFarm()
             end
             wait(FarmSettings.TeleportDelay)
             
-            -- PASSO 2: Pressionar E
             print("PASSO 2: Pressionando E...")
             FarmStatus.Text = "🔄 Ciclo " .. cycle .. " - Pressionando E"
             PressE()
             wait(FarmSettings.KeyPressDelay)
             
-            -- PASSO 3: Teleportar para Position2
             print("PASSO 3: Teleportando para Position2...")
             FarmStatus.Text = "🔄 Ciclo " .. cycle .. " - Indo para Position2"
             if not Teleport(FarmSettings.Position2) then
@@ -447,13 +579,11 @@ local function RunCompleteFarm()
             end
             wait(FarmSettings.TeleportDelay)
             
-            -- PASSO 4: Se mexer
             print("PASSO 4: Movimentando...")
             FarmStatus.Text = "🔄 Ciclo " .. cycle .. " - Movimentando"
             MoveAround()
             wait(0.5)
             
-            -- PASSO 5: Aguardar morte
             print("PASSO 5: Aguardando morte...")
             if not WaitForDeath() then
                 print("Farm cancelado!")
@@ -464,7 +594,6 @@ local function RunCompleteFarm()
             print("═══════════════════════════════════════")
         end
         
-        -- Finalizar
         AutoFarmEnabled = false
         PegarValButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
         PegarValButton.Text = "⚡ PEGAR AS VAL"
@@ -472,6 +601,73 @@ local function RunCompleteFarm()
         print("FARM COMPLETO! Total de ciclos: " .. FarmSettings.TotalCycles)
     end)
 end
+
+-- ═══════════════════════════════════════════════════════════════
+--                    ATUALIZAR FPS E PING
+-- ═══════════════════════════════════════════════════════════════
+
+local FPSTable = {}
+local lastFPSUpdate = tick()
+
+local function UpdateFPS()
+    local currentTime = tick()
+    
+    for i = #FPSTable, 1, -1 do
+        if FPSTable[i] < currentTime - 1 then
+            table.remove(FPSTable, i)
+        end
+    end
+    
+    table.insert(FPSTable, currentTime)
+    
+    if currentTime - lastFPSUpdate >= 0.5 then
+        local fps = #FPSTable
+        FPSLabel.Text = "📊 FPS: " .. fps
+        lastFPSUpdate = currentTime
+    end
+end
+
+local function UpdatePing()
+    local success, ping = pcall(function()
+        return Stats:FindFirstChild("PerformanceStats").Ping:GetValue()
+    end)
+    
+    if success then
+        ping = math.floor(ping)
+        PingLabel.Text = "📡 Ping: " .. ping .. " ms"
+    end
+end
+
+-- ═══════════════════════════════════════════════════════════════
+--                    TIMER SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+
+spawn(function()
+    while true do
+        wait(1)
+        
+        PlayTime.seconds = PlayTime.seconds + 1
+        
+        if PlayTime.seconds >= 60 then
+            PlayTime.seconds = 0
+            PlayTime.minutes = PlayTime.minutes + 1
+        end
+        
+        if PlayTime.minutes >= 60 then
+            PlayTime.minutes = 0
+            PlayTime.hours = PlayTime.hours + 1
+        end
+        
+        TimerLabel.Text = string.format("⏱️ Tempo: %d:%d:%d", PlayTime.hours, PlayTime.minutes, PlayTime.seconds)
+    end
+end)
+
+-- Atualizar Ping periodicamente
+spawn(function()
+    while wait(2) do
+        UpdatePing()
+    end
+end)
 
 -- ═══════════════════════════════════════════════════════════════
 --                    EVENTOS UI
@@ -483,8 +679,13 @@ PegarValButton.MouseButton1Click:Connect(function()
     end
 end)
 
+MinimizeButton.MouseButton1Click:Connect(function()
+    ToggleMinimize()
+end)
+
 CloseButton.MouseButton1Click:Connect(function()
     AutoFarmEnabled = false
+    AntiAFKEnabled = false
     ScreenGui:Destroy()
     FOVCircle:Remove()
     ClearAllESP()
@@ -508,6 +709,7 @@ end)
 
 RunService.RenderStepped:Connect(function()
     UpdateFOV()
+    UpdateFPS()
     
     if AimLockEnabled then
         if AimSettings.ESPForAll then
@@ -569,9 +771,10 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 print("════════════════════════════════════════════════")
-print("    🎯 AIMLOCK + PEGAR AS VAL CARREGADO")
+print("    🎯 SCRIPT COMPLETO CARREGADO")
 print("════════════════════════════════════════════════")
 print("✅ AimLock: Pressione 'E'")
-print("✅ Pegar AS VAL: Clique no botão roxo")
-print("✅ Fluxo: Teleporta → Clica E → Se mexe → Aguarda morte")
+print("✅ Auto Farm: Clique no botão roxo")
+print("✅ Anti-AFK: Ativo automaticamente")
+print("✅ Minimizar: Botão '-' no canto")
 print("════════════════════════════════════════════════")
