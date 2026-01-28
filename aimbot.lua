@@ -178,7 +178,7 @@ ScreenGui.IgnoreGuiInset = true
 -- Tamanhos adaptados para cada plataforma
 local UIScale = IsMobile and 1.2 or 1
 local MainFrameWidth = IsMobile and 380 or 350
-local MainFrameHeight = IsMobile and 480 or 430
+local MainFrameHeight = IsMobile and 520 or 480
 
 -- Frame Principal
 local MainFrame = Instance.new("Frame")
@@ -280,14 +280,30 @@ local function CreateStatusLabel(name, text, position, parent)
 end
 
 -- Info AimLock
-local aimInfoText = IsMobile and "Ativar AimLock: Botão 🎯" or "Ativar AimLock: Tecla E"
+local aimInfoText = IsMobile and "Ativar AimLock: Botão 🎯" or "AimLock: Tecla E ou Clique Abaixo"
 local AimInfo = CreateStatusLabel("AimInfo", aimInfoText, UDim2.new(0, 25, 0, 20), ContentFrame)
+
+-- Botão AimLock na Interface (para PC também)
+local AimLockToggleButton = Instance.new("TextButton")
+AimLockToggleButton.Name = "AimLockToggleButton"
+AimLockToggleButton.Size = UDim2.new(0, MainFrameWidth - 50, 0, IsMobile and 60 or 50)
+AimLockToggleButton.Position = UDim2.new(0, 25, 0, IsMobile and 65 or 60)
+AimLockToggleButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
+AimLockToggleButton.Text = "🎯 ATIVAR AIMLOCK"
+AimLockToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AimLockToggleButton.TextSize = IsMobile and 20 or 18
+AimLockToggleButton.Font = Enum.Font.GothamBold
+AimLockToggleButton.Parent = ContentFrame
+
+local AimLockToggleCorner = Instance.new("UICorner")
+AimLockToggleCorner.CornerRadius = UDim.new(0, 8)
+AimLockToggleCorner.Parent = AimLockToggleButton
 
 -- Botão Pegar AS VAL
 local PegarValButton = Instance.new("TextButton")
 PegarValButton.Name = "PegarValButton"
 PegarValButton.Size = UDim2.new(0, MainFrameWidth - 50, 0, IsMobile and 70 or 60)
-PegarValButton.Position = UDim2.new(0, 25, 0, IsMobile and 70 or 65)
+PegarValButton.Position = UDim2.new(0, 25, 0, IsMobile and 140 or 125)
 PegarValButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 PegarValButton.Text = "⚡ PEGAR AS VAL"
 PegarValButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -300,13 +316,13 @@ ValCorner.CornerRadius = UDim.new(0, 8)
 ValCorner.Parent = PegarValButton
 
 -- Status Farm
-local FarmStatus = CreateStatusLabel("FarmStatus", "Aguardando...", UDim2.new(0, 25, 0, IsMobile and 155 or 140), ContentFrame)
+local FarmStatus = CreateStatusLabel("FarmStatus", "Aguardando...", UDim2.new(0, 25, 0, IsMobile and 225 or 200), ContentFrame)
 
 -- Botão Fullbright
 local FullbrightButton = Instance.new("TextButton")
 FullbrightButton.Name = "FullbrightButton"
 FullbrightButton.Size = UDim2.new(0, MainFrameWidth - 50, 0, IsMobile and 50 or 40)
-FullbrightButton.Position = UDim2.new(0, 25, 0, IsMobile and 205 or 185)
+FullbrightButton.Position = UDim2.new(0, 25, 0, IsMobile and 240 or 215)
 FullbrightButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 FullbrightButton.Text = "💡 BRILHO: OFF"
 FullbrightButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -321,7 +337,7 @@ FullbrightCorner.Parent = FullbrightButton
 -- Separador
 local Separator = Instance.new("Frame")
 Separator.Size = UDim2.new(0, MainFrameWidth - 50, 0, 2)
-Separator.Position = UDim2.new(0, 25, 0, IsMobile and 270 or 240)
+Separator.Position = UDim2.new(0, 25, 0, IsMobile and 305 or 270)
 Separator.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
 Separator.BorderSizePixel = 0
 Separator.Parent = ContentFrame
@@ -329,7 +345,7 @@ Separator.Parent = ContentFrame
 -- Anti-AFK Info Frame
 local AntiAFKFrame = Instance.new("Frame")
 AntiAFKFrame.Size = UDim2.new(0, MainFrameWidth - 50, 0, IsMobile and 130 or 120)
-AntiAFKFrame.Position = UDim2.new(0, 25, 0, IsMobile and 285 or 255)
+AntiAFKFrame.Position = UDim2.new(0, 25, 0, IsMobile and 320 or 285)
 AntiAFKFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
 AntiAFKFrame.BorderSizePixel = 0
 AntiAFKFrame.Parent = ContentFrame
@@ -596,9 +612,13 @@ local function ToggleAimLock()
     AimLockEnabled = not AimLockEnabled
     
     if AimLockEnabled then
-        local statusText = IsMobile and "✅ AimLock: ATIVADO (Botão 🎯)" or "✅ AimLock: ATIVADO (Tecla E)"
+        local statusText = IsMobile and "✅ AimLock: ATIVADO (Botão 🎯)" or "✅ AimLock: ATIVADO (Tecla E/Clique)"
         AimInfo.Text = statusText
         AimInfo.BackgroundColor3 = Color3.fromRGB(0, 100, 0)
+        
+        -- Atualizar botão na interface
+        AimLockToggleButton.Text = "✅ AIMLOCK ATIVADO"
+        AimLockToggleButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
         
         if IsMobile and AimLockButton then
             AimLockButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
@@ -608,9 +628,13 @@ local function ToggleAimLock()
             CreateESPForAll()
         end
     else
-        local statusText = IsMobile and "Ativar AimLock: Botão 🎯" or "Ativar AimLock: Tecla E"
+        local statusText = IsMobile and "Ativar AimLock: Botão 🎯" or "AimLock: Tecla E ou Clique Abaixo"
         AimInfo.Text = statusText
         AimInfo.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        
+        -- Atualizar botão na interface
+        AimLockToggleButton.Text = "🎯 ATIVAR AIMLOCK"
+        AimLockToggleButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
         
         if IsMobile and AimLockButton then
             AimLockButton.BackgroundColor3 = Color3.fromRGB(128, 0, 128)
@@ -853,6 +877,11 @@ PegarValButton.MouseButton1Click:Connect(function()
     if not AutoFarmEnabled then
         RunCompleteFarm()
     end
+end)
+
+-- Botão AimLock na Interface
+AimLockToggleButton.MouseButton1Click:Connect(function()
+    ToggleAimLock()
 end)
 
 FullbrightButton.MouseButton1Click:Connect(function()
