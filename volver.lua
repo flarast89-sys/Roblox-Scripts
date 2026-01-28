@@ -241,26 +241,35 @@ RunService.Heartbeat:Connect(function()
     for _, obj in pairs(player.PlayerGui:GetDescendants()) do
         if obj:IsA("TextLabel") or obj:IsA("TextButton") then
             if obj.Visible and obj ~= statusLabel and obj ~= comandoLabel and obj ~= contadorLabel and obj ~= titulo then
-                local texto = obj.Text:lower()
+                local texto = obj.Text
                 
-                -- Remove prefixos e tudo após o ponto
+                -- Remove prefixos de chat (;h, /a, etc)
                 texto = texto:gsub("^[;/]%w+%s*", "")
-                texto = texto:match("([^%.]+)") or texto
-                texto = texto:gsub("%s+", " "):match("^%s*(.-)%s*$") or texto
                 
-                if texto:find("direita,%s*volver") or texto:find("direita,volver") then
+                -- DETECÇÃO RIGOROSA - tem que ser EXATAMENTE como especificado
+                -- Remove espaços extras no início e fim
+                texto = texto:match("^%s*(.-)%s*$") or texto
+                
+                -- Verifica comandos EXATOS (case insensitive mas com vírgula e ponto obrigatórios)
+                local textoLower = texto:lower()
+                
+                -- FORMATO CORRETO: "palavra, palavra." (com vírgula e ponto)
+                if textoLower == "direita, volver." then
                     comandoEncontrado = "direita_volver"
-                elseif texto:find("esquerda,%s*volver") or texto:find("esquerda,volver") then
+                elseif textoLower == "esquerda, volver." then
                     comandoEncontrado = "esquerda_volver"
-                elseif texto:find("retaguarda,%s*volver") or texto:find("retaguarda,volver") then
+                elseif textoLower == "retaguarda, volver." then
                     comandoEncontrado = "retaguarda_volver"
-                elseif texto:find("direita,%s*inclinar") or texto:find("direita,inclinar") then
+                elseif textoLower == "direita, inclinar." then
                     comandoEncontrado = "direita_inclinar"
-                elseif texto:find("esquerda,%s*inclinar") or texto:find("esquerda,inclinar") then
+                elseif textoLower == "esquerda, inclinar." then
                     comandoEncontrado = "esquerda_inclinar"
                 end
                 
-                if comandoEncontrado then break end
+                if comandoEncontrado then 
+                    print("✓ Comando válido detectado: " .. texto)
+                    break 
+                end
             end
         end
     end
@@ -319,10 +328,13 @@ end)
 atualizarGUI()
 
 print("━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-print("🎮 Auto Comando!")
-print("• Detecta comando")
-print("• Aguarda 2.5 segundos")
-print("• Gira em 0.5 segundos")
-print("• Aguarda comando sumir")
-print("• Pronto para próximo!")
+print("🎮 Auto Comando RIGOROSO!")
+print("• Detecta APENAS comandos corretos:")
+print("  - Direita, volver.")
+print("  - Esquerda, volver.")
+print("  - Retaguarda, volver.")
+print("  - Direita, inclinar.")
+print("  - Esquerda, inclinar.")
+print("• COM vírgula e ponto obrigatórios!")
+print("• Aguarda 2.5s → Gira em 0.5s")
 print("━━━━━━━━━━━━━━━━━━━━━━━━━━━")
